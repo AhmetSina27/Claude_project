@@ -212,34 +212,51 @@ class _TimerSection extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, box) {
+        // Yatay geniş ekranda (tablet, bilgisayar) üst kısım tek satıra iner, sayaç büyür.
+        final landscape = box.maxWidth >= 700 && box.maxWidth > box.maxHeight * 1.15;
+        final hasTaskLine = c.phase == Phase.focus && task != null;
         // Saatin dışındaki öğelerin kapladığı yaklaşık yükseklik.
-        const chrome = 350.0;
+        final chrome = landscape ? (hasTaskLine ? 200.0 : 172.0) : 350.0;
         const cards = 3;
-        final byHeight = (box.maxHeight - chrome) / 1.2;
+        final byHeight = (box.maxHeight - chrome) / 1.18;
         final byWidth = (box.maxWidth - 24) / cards;
-        final card = byHeight.clamp(70.0, byWidth.clamp(70.0, 420.0));
+        final card = byHeight.clamp(70.0, byWidth.clamp(70.0, 460.0));
+        final phases = SegmentedButton<Phase>(
+          segments: [for (final p in Phase.values) ButtonSegment(value: p, label: Text(p.shortLabel))],
+          selected: {c.phase},
+          showSelectedIcon: false,
+          style: SegmentedButton.styleFrom(selectedBackgroundColor: color, selectedForegroundColor: Colors.white),
+          onSelectionChanged: (s) => c.selectPhase(s.first),
+        );
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SegmentedButton<Phase>(
-              segments: [for (final p in Phase.values) ButtonSegment(value: p, label: Text(p.shortLabel))],
-              selected: {c.phase},
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(selectedBackgroundColor: color, selectedForegroundColor: Colors.white),
-              onSelectionChanged: (s) => c.selectPhase(s.first),
-            ),
-            const SizedBox(height: 12),
-            if (c.phase == Phase.focus) DurationChips(color: color) else const SizedBox(height: 36),
-            const SizedBox(height: 14),
-            Text(
-              trUpper(c.isFree ? 'Serbest odak' : c.phase.label),
-              style: t.labelMedium?.copyWith(letterSpacing: 2.5, color: muted, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 14),
+            if (landscape)
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  phases,
+                  if (c.phase == Phase.focus) DurationChips(color: color, inline: true),
+                ],
+              )
+            else ...[
+              phases,
+              const SizedBox(height: 12),
+              if (c.phase == Phase.focus) DurationChips(color: color) else const SizedBox(height: 36),
+              const SizedBox(height: 14),
+              Text(
+                trUpper(c.isFree ? 'Serbest odak' : c.phase.label),
+                style: t.labelMedium?.copyWith(letterSpacing: 2.5, color: muted, fontWeight: FontWeight.w700),
+              ),
+            ],
+            SizedBox(height: landscape ? 10 : 14),
             FlipClock(duration: c.display, maxCardSize: card, glass: c.settings.backgroundId != 'none'),
-            const SizedBox(height: 14),
+            SizedBox(height: landscape ? 8 : 14),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: BoxConstraints(maxWidth: landscape ? card * 3 : 520),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
@@ -252,10 +269,10 @@ class _TimerSection extends StatelessWidget {
             ),
             if (c.phase == Phase.focus && task != null)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
+                padding: EdgeInsets.only(top: landscape ? 6 : 12),
                 child: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodyLarge),
               ),
-            const SizedBox(height: 20),
+            SizedBox(height: landscape ? 12 : 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -288,7 +305,7 @@ class _TimerSection extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: landscape ? 8 : 16),
             _CycleDots(done: c.completedInCycle, total: c.settings.longBreakInterval, color: color),
             if (c.isRunning && c.phase == Phase.focus && c.settings.doNotDisturb)
               Padding(

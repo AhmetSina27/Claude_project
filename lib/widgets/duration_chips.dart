@@ -6,8 +6,11 @@ import '../state/pomodoro_controller.dart';
 
 /// Odak süresi için hızlı seçim: hazır süreler, özel süre ve serbest (ileri sayan) mod.
 class DurationChips extends StatelessWidget {
-  const DurationChips({super.key, required this.color});
+  const DurationChips({super.key, required this.color, this.inline = false});
   final Color color;
+
+  /// true: kaydırma olmadan, yalnızca içeriği kadar yer kaplar (yatay ekranda üst satır için).
+  final bool inline;
 
   static const presets = [15, 25, 45, 60, 90, 120];
 
@@ -31,24 +34,27 @@ class DurationChips extends StatelessWidget {
       ),
     );
 
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final p in presets) chip(formatMinutes(p), !c.isFree && m == p, () => c.setFocusDuration(p)),
+        chip(
+          isCustom ? formatMinutes(m) : 'Özel',
+          isCustom,
+          () => showCustomDurationDialog(context, c),
+          icon: Icons.tune_rounded,
+        ),
+        chip('Serbest', c.isFree, () => c.setFocusDuration(null), icon: Icons.all_inclusive_rounded),
+      ],
+    );
+    if (inline) return SizedBox(height: 36, child: row);
     return SizedBox(
       height: 36,
       child: Center(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              for (final p in presets) chip(formatMinutes(p), !c.isFree && m == p, () => c.setFocusDuration(p)),
-              chip(
-                isCustom ? formatMinutes(m) : 'Özel',
-                isCustom,
-                () => showCustomDurationDialog(context, c),
-                icon: Icons.tune_rounded,
-              ),
-              chip('Serbest', c.isFree, () => c.setFocusDuration(null), icon: Icons.all_inclusive_rounded),
-            ],
-          ),
+          child: row,
         ),
       ),
     );

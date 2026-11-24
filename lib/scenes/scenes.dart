@@ -15,7 +15,12 @@ enum Scene {
   orman('Sisli orman', Icons.forest_rounded, MistyForestScene()),
   pencere('Karlı pencere', Icons.ac_unit_rounded, SnowyWindowScene()),
   deniz('Gün batımı', Icons.wb_twilight_rounded, SunsetSeaScene()),
-  sakin('Sakin', Icons.bubble_chart_rounded, CalmScene());
+  sakin('Sakin', Icons.bubble_chart_rounded, CalmScene()),
+  kiraz('Kiraz çiçekleri', Icons.local_florist_rounded, SakuraScene()),
+  kutuphane('Kütüphane', Icons.local_library_rounded, LibraryScene()),
+  uzay('Uzay', Icons.public_rounded, SpaceScene()),
+  sualti('Su altı', Icons.scuba_diving_rounded, UnderwaterScene()),
+  lavanta('Lavanta tarlası', Icons.spa_rounded, LavenderScene());
 
   const Scene(this.label, this.icon, this.painter);
   final String label;
@@ -37,8 +42,8 @@ enum Scene {
     AmbientSound.ates => Scene.somine,
     AmbientSound.kulube => Scene.pencere,
     AmbientSound.dalga => Scene.deniz,
-    AmbientSound.kahverengi => Scene.sakin,
-    AmbientSound.tiktak => Scene.sakin,
+    AmbientSound.kahverengi => Scene.uzay,
+    AmbientSound.tiktak => Scene.kutuphane,
     AmbientSound.none => Scene.gece,
   };
 

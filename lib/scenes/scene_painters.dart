@@ -955,3 +955,649 @@ class CalmScene extends ScenePainter {
     }
   }
 }
+
+// ================================================================ 9. Kiraz çiçekleri
+
+class SakuraScene extends ScenePainter {
+  const SakuraScene();
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(
+      c,
+      Offset.zero & s,
+      const [Color(0xFF2A1E44), Color(0xFF6A3F70), Color(0xFFD88FA0), Color(0xFFF2C1B5)],
+      stops: const [0, .45, .8, 1],
+    );
+    // Dolunay
+    final moon = Offset(s.width * .7, s.height * .24);
+    final mr = s.shortestSide * .09;
+    glow(c, moon, mr * 4, const Color(0xFFFFE6EE).withValues(alpha: .35));
+    c.drawCircle(moon, mr, Paint()..color = const Color(0xFFFFF1EC));
+    // Karlı tepeli dağ
+    final base = s.height * .78;
+    final peak = Offset(s.width * .38, s.height * .36);
+    final mountain = Path()
+      ..moveTo(s.width * -.05, base)
+      ..quadraticBezierTo(peak.dx - s.width * .15, peak.dy + s.height * .18, peak.dx, peak.dy)
+      ..quadraticBezierTo(peak.dx + s.width * .15, peak.dy + s.height * .18, s.width * .85, base)
+      ..close();
+    c.drawPath(mountain, Paint()..color = const Color(0xFF5B4A7A));
+    c.save();
+    c.clipPath(mountain);
+    final cap = Path()
+      ..moveTo(peak.dx - s.width * .09, peak.dy + s.height * .09)
+      ..lineTo(peak.dx, peak.dy - 4)
+      ..lineTo(peak.dx + s.width * .09, peak.dy + s.height * .09)
+      ..lineTo(peak.dx + s.width * .05, peak.dy + s.height * .07)
+      ..lineTo(peak.dx + s.width * .02, peak.dy + s.height * .1)
+      ..lineTo(peak.dx - s.width * .03, peak.dy + s.height * .07)
+      ..close();
+    c.drawPath(cap, Paint()..color = const Color(0xFFF3E6F0));
+    c.restore();
+    c.drawPath(ridge(s, .84, .04, 61), Paint()..color = const Color(0xFF3B2B55));
+    // Pagoda
+    final px = s.width * .8, py = s.height * .84;
+    final ink = Paint()..color = const Color(0xFF24183A);
+    final unit = s.shortestSide * .045;
+    for (var i = 0; i < 4; i++) {
+      final w = unit * (4 - i * .7);
+      final y = py - i * unit * 1.25;
+      c.drawRect(Rect.fromCenter(center: Offset(px, y - unit * .35), width: w * .55, height: unit * .7), ink);
+      final roof = Path()
+        ..moveTo(px - w * .75, y - unit * .7)
+        ..quadraticBezierTo(px, y - unit * 1.05, px + w * .75, y - unit * .7)
+        ..lineTo(px + w * .45, y - unit * .95)
+        ..lineTo(px - w * .45, y - unit * .95)
+        ..close();
+      c.drawPath(roof, ink);
+    }
+    c.drawLine(Offset(px, py - unit * 5.3), Offset(px, py - unit * 4.4), ink..strokeWidth = 2);
+    c.drawRect(Rect.fromLTRB(0, py, s.width, s.height), Paint()..color = const Color(0xFF24183A));
+  }
+
+  @override
+  void front(Canvas c, Size s) {
+    // Sol üstten uzanan çiçekli dal
+    final bark = Paint()
+      ..color = const Color(0xFF2B1A24)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final pts = <Offset>[];
+    void branch(Offset a, Offset b, double w, int depth) {
+      bark.strokeWidth = w;
+      final mid = Offset((a.dx + b.dx) / 2, (a.dy + b.dy) / 2 + w * 1.5);
+      c.drawPath(
+        Path()
+          ..moveTo(a.dx, a.dy)
+          ..quadraticBezierTo(mid.dx, mid.dy, b.dx, b.dy),
+        bark,
+      );
+      pts.add(b);
+      if (depth == 0) return;
+      final d = b - a;
+      branch(b, b + Offset(d.dx * .6, d.dy * .6 + d.distance * .15), w * .6, depth - 1);
+      branch(b, b + Offset(d.dx * .45, -d.distance * .25), w * .55, depth - 1);
+    }
+
+    final u = s.shortestSide;
+    branch(Offset(-u * .05, u * .05), Offset(u * .25, u * .16), u * .022, 3);
+    final petal = Paint();
+    for (final (i, p) in pts.indexed) {
+      for (var k = 0; k < 9; k++) {
+        final o = p + Offset((rnd(i * 9 + k, 71) - .5) * u * .09, (rnd(i * 9 + k, 72) - .5) * u * .06);
+        petal.color = Color.lerp(const Color(0xFFF7C6D6), const Color(0xFFE88BAA), rnd(i * 9 + k, 73))!;
+        c.drawCircle(o, u * (.008 + rnd(i * 9 + k, 74) * .01), petal);
+      }
+    }
+  }
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    final p = Paint();
+    for (var i = 0; i < 46; i++) {
+      final life = 9 + rnd(i, 81) * 8;
+      final ph = ((t + rnd(i, 82) * life) % life) / life;
+      final x = s.width * (rnd(i, 83) * 1.1 - .05) + sin(ph * 7 + i) * 40 + ph * s.width * .15;
+      final y = -20 + ph * (s.height + 40);
+      p.color = Color.lerp(const Color(0xFFFAD0DD), const Color(0xFFF09AB5), rnd(i, 84))!.withValues(alpha: .9);
+      c.save();
+      c.translate(x, y);
+      c.rotate(ph * 10 + i);
+      final sz = 4 + rnd(i, 85) * 4;
+      c.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: sz * 1.6, height: sz * (.5 + .5 * cos(ph * 14 + i).abs())),
+        p,
+      );
+      c.restore();
+    }
+  }
+}
+
+// ================================================================ 10. Kütüphane
+
+class LibraryScene extends ScenePainter {
+  const LibraryScene();
+
+  Rect _window(Size s) {
+    final w = min(s.width * .34, s.height * .42);
+    return Rect.fromCenter(center: Offset(s.width / 2, s.height * .38), width: w, height: w * 1.35);
+  }
+
+  void _shelf(Canvas c, Rect r, int seed) {
+    final wood = Paint()..color = const Color(0xFF3A2416);
+    c.drawRect(r, Paint()..color = const Color(0xFF1C110B));
+    final rowH = r.height / 5;
+    const colors = [
+      Color(0xFF7A2E2A),
+      Color(0xFF2F5A4A),
+      Color(0xFF8A6A3A),
+      Color(0xFF34466E),
+      Color(0xFF5E3A5A),
+      Color(0xFFB08A5A),
+    ];
+    for (var row = 0; row < 5; row++) {
+      final y0 = r.top + row * rowH;
+      var x = r.left + 4;
+      var k = 0;
+      while (x < r.right - 6) {
+        final bw = 6 + rnd(seed + row * 50 + k, 91) * 14;
+        final bh = rowH * (.62 + rnd(seed + row * 50 + k, 92) * .3);
+        final col = colors[(rnd(seed + row * 50 + k, 93) * colors.length).floor()];
+        final book = Rect.fromLTWH(x, y0 + rowH - 6 - bh, min(bw, r.right - 6 - x), bh);
+        c.drawRect(book, Paint()..color = col);
+        c.drawRect(
+          Rect.fromLTWH(book.left, book.top + bh * .15, book.width, 2),
+          Paint()..color = const Color(0x55E8D2A0),
+        );
+        x += bw + 1;
+        k++;
+      }
+      c.drawRect(Rect.fromLTWH(r.left, y0 + rowH - 6, r.width, 6), wood);
+    }
+    c.drawRect(
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8
+        ..color = const Color(0xFF3A2416),
+    );
+  }
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(c, Offset.zero & s, const [Color(0xFF2A1B12), Color(0xFF1E130C)]);
+    final win = _window(s);
+    // Raflar
+    _shelf(c, Rect.fromLTRB(s.width * .02, s.height * .06, win.left - s.width * .06, s.height * .86), 1);
+    _shelf(c, Rect.fromLTRB(win.right + s.width * .06, s.height * .06, s.width * .98, s.height * .86), 500);
+    // Pencere: yağmurlu gece
+    c.save();
+    c.clipRRect(
+      RRect.fromRectAndCorners(win, topLeft: Radius.circular(win.width / 2), topRight: Radius.circular(win.width / 2)),
+    );
+    fillGradient(c, win, const [Color(0xFF0E1A33), Color(0xFF243A5C)]);
+    glow(
+      c,
+      Offset(win.left + win.width * .7, win.top + win.height * .3),
+      win.width * .5,
+      const Color(0xFFBFD0FF).withValues(alpha: .25),
+    );
+    c.drawCircle(
+      Offset(win.left + win.width * .7, win.top + win.height * .3),
+      win.width * .08,
+      Paint()..color = const Color(0xFFE8EEF8),
+    );
+    c.drawPath(
+      ridge(Size(win.width, win.height), .88, .05, 95).shift(win.topLeft),
+      Paint()..color = const Color(0xFF0A1222),
+    );
+    c.restore();
+    // Masa
+    c.drawRect(Rect.fromLTRB(0, s.height * .86, s.width, s.height), Paint()..color = const Color(0xFF3E2618));
+    c.drawRect(Rect.fromLTRB(0, s.height * .86, s.width, s.height * .875), Paint()..color = const Color(0xFF5A3A24));
+  }
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    final win = _window(s);
+    c.save();
+    c.clipRRect(
+      RRect.fromRectAndCorners(win, topLeft: Radius.circular(win.width / 2), topRight: Radius.circular(win.width / 2)),
+    );
+    final p = Paint()
+      ..strokeWidth = 1
+      ..color = const Color(0x55BFD0EE);
+    for (var i = 0; i < 60; i++) {
+      final speed = win.height * (1.2 + rnd(i, 101));
+      final y = win.top + ((t * speed + rnd(i, 102) * win.height) % (win.height + 20)) - 10;
+      final x = win.left + rnd(i, 103) * win.width;
+      c.drawLine(Offset(x, y), Offset(x - 2, y + 12), p);
+    }
+    c.restore();
+  }
+
+  @override
+  void front(Canvas c, Size s) {
+    final win = _window(s);
+    final frame = Paint()
+      ..color = const Color(0xFF4A2E1C)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = win.width * .045;
+    final shape = Path()
+      ..addRRect(
+        RRect.fromRectAndCorners(
+          win,
+          topLeft: Radius.circular(win.width / 2),
+          topRight: Radius.circular(win.width / 2),
+        ),
+      );
+    c.drawPath(shape, frame);
+    final m = Paint()
+      ..color = const Color(0xFF4A2E1C)
+      ..strokeWidth = win.width * .025;
+    c.drawLine(Offset(win.center.dx, win.top), Offset(win.center.dx, win.bottom), m);
+    c.drawLine(Offset(win.left, win.top + win.height * .55), Offset(win.right, win.top + win.height * .55), m);
+    // Masa lambası
+    final lx = s.width * .2, ly = s.height * .86;
+    final ink = Paint()..color = const Color(0xFF1A2E22);
+    c.drawRect(Rect.fromCenter(center: Offset(lx, ly - 4), width: 50, height: 8), ink);
+    c.drawLine(
+      Offset(lx, ly - 6),
+      Offset(lx + 18, ly - 70),
+      Paint()
+        ..color = const Color(0xFF1A2E22)
+        ..strokeWidth = 5,
+    );
+    final shade = Path()
+      ..moveTo(lx - 20, ly - 70)
+      ..lineTo(lx + 56, ly - 70)
+      ..lineTo(lx + 40, ly - 96)
+      ..lineTo(lx - 4, ly - 96)
+      ..close();
+    c.drawPath(shade, Paint()..color = const Color(0xFF2E6B4A));
+    // Masadaki kitap yığını
+    for (var i = 0; i < 3; i++) {
+      c.drawRect(
+        Rect.fromLTWH(s.width * .68 + i * 6, ly - 14 - i * 14, 120 - i * 12, 13),
+        Paint()..color = [const Color(0xFF7A2E2A), const Color(0xFF34466E), const Color(0xFF8A6A3A)][i],
+      );
+    }
+  }
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    final lx = s.width * .2 + 18, ly = s.height * .86 - 70;
+    // Lamba ışık konisi
+    final cone = Path()
+      ..moveTo(lx - 30, ly)
+      ..lineTo(lx + 40, ly)
+      ..lineTo(lx + s.width * .25, s.height * .86)
+      ..lineTo(lx - s.width * .2, s.height * .86)
+      ..close();
+    c.drawPath(
+      cone,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = ui.Gradient.linear(Offset(lx, ly), Offset(lx, s.height * .86), [
+          const Color(0x55FFC877),
+          const Color(0x11FFC877),
+        ]),
+    );
+    glow(c, Offset(lx + 5, ly + 4), 60, const Color(0xFFFFD08A).withValues(alpha: .6), blend: BlendMode.plus);
+    // Işıkta süzülen toz zerreleri
+    final p = Paint()..blendMode = BlendMode.plus;
+    for (var i = 0; i < 40; i++) {
+      final x = lx - s.width * .12 + rnd(i, 111) * s.width * .3 + sin(t * .3 + i) * 12;
+      final y = ly + 20 + ((rnd(i, 112) * (s.height * .86 - ly - 20)) + sin(t * .25 + i * 2) * 18);
+      final a = (.5 + .5 * sin(t * (.6 + rnd(i, 113)) + i)) * .6;
+      p.color = const Color(0xFFFFE2A8).withValues(alpha: a);
+      c.drawCircle(Offset(x, y), 1 + rnd(i, 114) * 1.2, p);
+    }
+  }
+}
+
+// ================================================================ 11. Uzay
+
+class SpaceScene extends ScenePainter {
+  const SpaceScene();
+
+  Offset _planet(Size s) => Offset(s.width * .78, s.height * .72);
+  double _pr(Size s) => s.shortestSide * .22;
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(c, Offset.zero & s, const [Color(0xFF05060F), Color(0xFF0B0A1E)]);
+    final neb = Paint()..maskFilter = MaskFilter.blur(BlurStyle.normal, s.shortestSide * .12);
+    for (final (o, r, col) in [
+      (Offset(s.width * .25, s.height * .3), .35, const Color(0x557B4BD6)),
+      (Offset(s.width * .45, s.height * .45), .25, const Color(0x403FB8C8)),
+      (Offset(s.width * .15, s.height * .65), .22, const Color(0x35E86FA0)),
+    ]) {
+      c.drawCircle(o, s.shortestSide * r, neb..color = col);
+    }
+    final p = Paint();
+    for (var i = 0; i < 260; i++) {
+      p.color = Colors.white.withValues(alpha: .25 + rnd(i, 121) * .6);
+      c.drawCircle(Offset(rnd(i, 122) * s.width, rnd(i, 123) * s.height), .4 + pow(rnd(i, 124), 3) * 1.8, p);
+    }
+  }
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    // Göz kırpan parlak yıldızlar
+    for (var i = 0; i < 18; i++) {
+      final a = (.5 + .5 * sin(t * (.5 + rnd(i, 131)) + i * 2)).clamp(0.0, 1.0);
+      final o = Offset(rnd(i, 132) * s.width, rnd(i, 133) * s.height * .6);
+      glow(c, o, 8, Colors.white.withValues(alpha: .5 * a));
+      c.drawCircle(o, 1.4, Paint()..color = Colors.white.withValues(alpha: a));
+    }
+    // Ara sıra geçen kuyruklu yıldız
+    const period = 14.0;
+    final ph = (t % period) / period;
+    if (ph < .18) {
+      final pr = ph / .18;
+      final cycle = (t / period).floor();
+      final start = Offset(s.width * (.1 + rnd(cycle, 134) * .4), s.height * (.05 + rnd(cycle, 135) * .2));
+      final head = start + Offset(s.width * .45, s.height * .2) * pr;
+      final tail = head - Offset(s.width * .12, s.height * .055);
+      c.drawLine(
+        tail,
+        head,
+        Paint()
+          ..strokeWidth = 2
+          ..strokeCap = StrokeCap.round
+          ..shader = ui.Gradient.linear(tail, head, [
+            const Color(0x00A0E8FF),
+            Color(0xFFDDF6FF).withValues(alpha: 1 - pr),
+          ]),
+      );
+    }
+  }
+
+  void _rings(Canvas c, Size s, {required bool frontHalf}) {
+    final pc = _planet(s), r = _pr(s);
+    final rect = Rect.fromCenter(center: pc, width: r * 3.6, height: r * .9);
+    c.save();
+    c.translate(pc.dx, pc.dy);
+    c.rotate(-.28);
+    c.translate(-pc.dx, -pc.dy);
+    c.clipRect(
+      frontHalf
+          ? Rect.fromLTRB(rect.left - 10, pc.dy, rect.right + 10, rect.bottom + 10)
+          : Rect.fromLTRB(rect.left - 10, rect.top - 10, rect.right + 10, pc.dy),
+    );
+    for (var k = 0; k < 4; k++) {
+      c.drawOval(
+        rect.deflate(k * r * .07),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = r * .05
+          ..color = [
+            const Color(0x99E8C9A0),
+            const Color(0x66C9A27A),
+            const Color(0x88F0DDBF),
+            const Color(0x55B08A6A),
+          ][k],
+      );
+    }
+    c.restore();
+  }
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    final pc = _planet(s), r = _pr(s);
+    _rings(c, s, frontHalf: false);
+    // Gezegen: yavaşça kayan bulut bantları
+    c.save();
+    c.clipPath(Path()..addOval(Rect.fromCircle(center: pc, radius: r)));
+    c.drawCircle(pc, r, Paint()..color = const Color(0xFFB0705A));
+    for (var k = 0; k < 9; k++) {
+      final y = pc.dy - r + k * r * .24;
+      final shift = (t * (6 + k * 1.5)) % (r * 2);
+      final band = Paint()
+        ..color = [
+          const Color(0xFFD49A6E),
+          const Color(0xFF9A5A48),
+          const Color(0xFFE8BC8A),
+        ][k % 3].withValues(alpha: .55);
+      for (var j = -1; j < 2; j++) {
+        c.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(pc.dx - r * 2 + shift + j * r * 2, y, r * 1.6, r * .12),
+            Radius.circular(r * .06),
+          ),
+          band,
+        );
+      }
+    }
+    // Gölge
+    c.drawCircle(
+      pc,
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          pc + Offset(-r * .5, -r * .5),
+          r * 2,
+          [const Color(0x00000000), const Color(0xCC05060F)],
+          const [.35, 1],
+        ),
+    );
+    c.restore();
+    _rings(c, s, frontHalf: true);
+    // Yörüngedeki küçük ay
+    final a = t * .15;
+    final mo = pc + Offset(cos(a) * r * 2.3, sin(a) * r * .7);
+    final behind = sin(a) < 0;
+    if (!behind || (mo - pc).distance > r) {
+      c.drawCircle(mo, r * .09, Paint()..color = const Color(0xFFD8D8E0));
+    }
+  }
+
+  @override
+  bool get hasFront => false;
+}
+
+// ================================================================ 12. Su altı
+
+class UnderwaterScene extends ScenePainter {
+  const UnderwaterScene();
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(
+      c,
+      Offset.zero & s,
+      const [Color(0xFF2B8CA6), Color(0xFF155A78), Color(0xFF07263C)],
+      stops: const [0, .45, 1],
+    );
+  }
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    // Yüzeyden süzülen ışık huzmeleri
+    for (var i = 0; i < 7; i++) {
+      final x = s.width * (rnd(i, 141) * 1.2 - .1) + sin(t * .2 + i) * 30;
+      final w = s.width * (.04 + rnd(i, 142) * .06);
+      final a = .10 + .06 * sin(t * .5 + i * 2);
+      final ray = Path()
+        ..moveTo(x - w / 2, 0)
+        ..lineTo(x + w / 2, 0)
+        ..lineTo(x + w * 2.5 + s.width * .1, s.height)
+        ..lineTo(x - w * .5 + s.width * .1, s.height)
+        ..close();
+      c.drawPath(
+        ray,
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..shader = ui.Gradient.linear(Offset(x, 0), Offset(x, s.height), [
+            Colors.white.withValues(alpha: a),
+            Colors.white.withValues(alpha: 0),
+          ]),
+      );
+    }
+    // Uzaktan yüzen balık sürüsü
+    final p = Paint()..color = const Color(0xFF0E3A52).withValues(alpha: .8);
+    for (var i = 0; i < 14; i++) {
+      const period = 40.0;
+      final ph = ((t + rnd(i, 143) * 4) % period) / period;
+      final x = -40 + ph * (s.width + 80) + rnd(i, 144) * 60;
+      final y = s.height * (.35 + rnd(i, 145) * .2) + sin(t * .8 + i) * 8;
+      final sz = 7 + rnd(i, 146) * 5;
+      final body = Path()
+        ..moveTo(x + sz, y)
+        ..quadraticBezierTo(x, y - sz * .5, x - sz, y)
+        ..quadraticBezierTo(x, y + sz * .5, x + sz, y)
+        ..moveTo(x - sz * .8, y)
+        ..lineTo(x - sz * 1.5, y - sz * .45)
+        ..lineTo(x - sz * 1.5, y + sz * .45)
+        ..close();
+      c.drawPath(body, p);
+    }
+  }
+
+  @override
+  void front(Canvas c, Size s) {
+    final sand = Path()..moveTo(0, s.height);
+    for (double x = 0; x <= s.width + 10; x += 10) {
+      sand.lineTo(x, s.height * (.88 + .03 * sin(x / s.width * 5 + 1) + .01 * sin(x / 40)));
+    }
+    sand
+      ..lineTo(s.width, s.height)
+      ..close();
+    c.drawPath(sand, Paint()..color = const Color(0xFF3A4A44));
+    for (var i = 0; i < 8; i++) {
+      final x = rnd(i, 151) * s.width;
+      final r = s.shortestSide * (.03 + rnd(i, 152) * .05);
+      c.drawOval(
+        Rect.fromCenter(center: Offset(x, s.height * .9), width: r * 2.4, height: r * 1.4),
+        Paint()..color = const Color(0xFF26343A),
+      );
+    }
+  }
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    // Sallanan yosunlar
+    for (var i = 0; i < 12; i++) {
+      final x0 = (i + rnd(i, 161) * .7) / 12 * s.width;
+      final h = s.height * (.2 + rnd(i, 162) * .25);
+      final path = Path()..moveTo(x0, s.height * .92);
+      const seg = 12;
+      for (var k = 1; k <= seg; k++) {
+        final f = k / seg;
+        path.lineTo(x0 + sin(t * .8 + i + f * 3) * 16 * f, s.height * .92 - h * f);
+      }
+      c.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 5 + rnd(i, 163) * 4
+          ..color = Color.lerp(const Color(0xFF1F5A3A), const Color(0xFF3E8A4A), rnd(i, 164))!,
+      );
+    }
+    // Yükselen kabarcıklar
+    final b = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    for (var i = 0; i < 30; i++) {
+      final life = 6 + rnd(i, 171) * 6;
+      final ph = ((t + rnd(i, 172) * life) % life) / life;
+      final x = rnd(i, 173) * s.width + sin(ph * 12 + i) * 6;
+      final y = s.height * .92 * (1 - ph);
+      b.color = Colors.white.withValues(alpha: .5 * (1 - ph));
+      c.drawCircle(Offset(x, y), 2 + rnd(i, 174) * 4, b);
+    }
+  }
+}
+
+// ================================================================ 13. Lavanta tarlası
+
+class LavenderScene extends ScenePainter {
+  const LavenderScene();
+
+  double _horizon(Size s) => s.height * .52;
+
+  @override
+  void back(Canvas c, Size s) {
+    final hz = _horizon(s);
+    fillGradient(
+      c,
+      Rect.fromLTWH(0, 0, s.width, hz),
+      const [Color(0xFF3A3A72), Color(0xFF9A6FB0), Color(0xFFE79A9A), Color(0xFFF7C88E)],
+      stops: const [0, .45, .8, 1],
+    );
+    final sun = Offset(s.width * .3, hz - s.height * .03);
+    glow(c, sun, s.shortestSide * .5, const Color(0xFFFFD9A0).withValues(alpha: .55));
+    c.drawCircle(sun, s.shortestSide * .05, Paint()..color = const Color(0xFFFFF0CF));
+    c.drawPath(ridge(Size(s.width, hz), .93, .06, 181), Paint()..color = const Color(0xFF6E5A8E));
+    // Ufuktaki yalnız ağaç
+    final tx = s.width * .72, ty = hz;
+    final ink = Paint()..color = const Color(0xFF3A2D52);
+    c.drawRect(Rect.fromLTWH(tx - 3, ty - s.height * .06, 6, s.height * .06), ink);
+    for (final (dx, dy, r) in [(0.0, -.08, .045), (-.03, -.065, .035), (.03, -.066, .033)]) {
+      c.drawCircle(Offset(tx + s.width * dx, ty + s.height * dy), s.shortestSide * r, ink);
+    }
+    // Tarla zemini
+    fillGradient(c, Rect.fromLTRB(0, hz, s.width, s.height), const [Color(0xFF6A4E8A), Color(0xFF3E2A5A)]);
+    // Ufka doğru daralan lavanta sıraları: her sırada kümelenmiş, hafif dağınık saplar
+    final vp = Offset(s.width * .5, hz);
+    final stem = Paint()..strokeCap = StrokeCap.round;
+    for (var r = -14; r <= 14; r++) {
+      final bx = s.width * .5 + r * s.width * .09;
+      for (var k = 0; k < 110; k++) {
+        final f = pow(k / 110, 1.7).toDouble();
+        final base = Offset.lerp(vp, Offset(bx, s.height * 1.05), f)!;
+        final spread = 2 + f * 22;
+        final p = base + Offset((rnd(r * 1000 + k, 184) - .5) * spread, (rnd(r * 1000 + k, 185) - .5) * spread * .3);
+        if (p.dx < -10 || p.dx > s.width + 10) continue;
+        final h = (4 + f * 28) * (.7 + rnd(r * 1000 + k, 186) * .6);
+        final lean = (rnd(r * 1000 + k, 187) - .5) * h * .25;
+        stem
+          ..strokeWidth = .8 + f * 4.5
+          ..color = Color.lerp(
+            const Color(0xFF7E62B4),
+            const Color(0xFFC09BEA),
+            rnd(r * 100 + k, 182),
+          )!.withValues(alpha: .65 + f * .3);
+        c.drawLine(p, p + Offset(lean, -h), stem);
+      }
+    }
+  }
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    for (var i = 0; i < 4; i++) {
+      final w = s.width * (.25 + rnd(i, 191) * .2);
+      final span = s.width + w * 2;
+      final x = (rnd(i, 192) * span + t * (5 + i * 2)) % span - w;
+      final y = s.height * (.08 + rnd(i, 193) * .22);
+      for (var j = 0; j < 4; j++) {
+        final o = Offset(x + j * w * .22, y + (j.isOdd ? -w * .03 : 0));
+        final r = w * .17;
+        c.drawCircle(
+          o,
+          r,
+          Paint()..shader = ui.Gradient.radial(o, r, [const Color(0x55FFE6E0), const Color(0x00FFE6E0)]),
+        );
+      }
+    }
+  }
+
+  @override
+  bool get hasFront => false;
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    final hz = _horizon(s);
+    final g = Paint()..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    for (var i = 0; i < 30; i++) {
+      final x = (rnd(i, 201) * s.width + sin(t * .2 + i) * 30) % s.width;
+      final y = hz + (s.height - hz) * (.1 + rnd(i, 202) * .8) + sin(t * .4 + i * 2) * 14;
+      final a = (.5 + .5 * sin(t * (1 + rnd(i, 203)) + i * 3)).clamp(0.0, 1.0);
+      g.color = const Color(0xFFFFE9A8).withValues(alpha: a * .8);
+      c.drawCircle(Offset(x, y), 2.5, g);
+    }
+  }
+}
