@@ -44,6 +44,8 @@ enum Scene {
     AmbientSound.dalga => Scene.deniz,
     AmbientSound.kahverengi => Scene.uzay,
     AmbientSound.tiktak => Scene.kutuphane,
+    AmbientSound.sinav => Scene.kutuphane,
+    AmbientSound.guguklu => Scene.pencere,
     AmbientSound.none => Scene.gece,
   };
 

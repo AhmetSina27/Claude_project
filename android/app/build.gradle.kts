@@ -16,7 +16,8 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.odaklanmazamani.odaklanma_zamani"
-    compileSdk = flutter.compileSdkVersion
+    // Bildirim kütüphanesi en yeni Android API (37) ile derlenmeyi istiyor; eski cihazlar yine desteklenir.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'state/pomodoro_controller.dart';
 
 /// Denetleyiciyi ağaçtaki tüm ekranlara ulaştırır.
@@ -80,7 +81,7 @@ class _OdaklanmaAppState extends State<OdaklanmaApp> with WidgetsBindingObserver
               : ThemeMode.dark,
           theme: _theme(Brightness.light),
           darkTheme: _theme(Brightness.dark),
-          home: const HomeScreen(),
+          home: widget.controller.onboarded ? const HomeScreen() : const OnboardingScreen(),
         ),
       ),
     );

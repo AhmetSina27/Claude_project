@@ -106,7 +106,10 @@ class _AmbientPainter extends CustomPainter {
       case AmbientSound.dalga:
         _water(canvas, size);
       case AmbientSound.kahverengi:
+      case AmbientSound.sinav:
         break;
+      case AmbientSound.guguklu:
+        _pulse(canvas, size);
       case AmbientSound.tiktak:
         _pulse(canvas, size);
       case AmbientSound.none:

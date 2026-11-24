@@ -48,6 +48,9 @@ class AppSettings {
     this.backgroundDim = .25,
     this.backgroundBlur = 0,
     this.freeFocus = false,
+    this.bellSound = BellSound.okul,
+    this.reminderEnabled = false,
+    this.reminderMinutes = 19 * 60,
   });
 
   final int focusMinutes;
@@ -81,6 +84,13 @@ class AppSettings {
   /// Serbest odak: süre sınırı olmadan ileri sayan kronometre.
   final bool freeFocus;
 
+  /// Odak bitince çalan zil.
+  final BellSound bellSound;
+
+  /// Günlük çalışma hatırlatması ve saati (gece yarısından itibaren dakika).
+  final bool reminderEnabled;
+  final int reminderMinutes;
+
   AppSettings copyWith({
     int? focusMinutes,
     int? shortBreakMinutes,
@@ -104,6 +114,9 @@ class AppSettings {
     double? backgroundDim,
     double? backgroundBlur,
     bool? freeFocus,
+    BellSound? bellSound,
+    bool? reminderEnabled,
+    int? reminderMinutes,
   }) => AppSettings(
     focusMinutes: focusMinutes ?? this.focusMinutes,
     shortBreakMinutes: shortBreakMinutes ?? this.shortBreakMinutes,
@@ -127,6 +140,9 @@ class AppSettings {
     backgroundDim: backgroundDim ?? this.backgroundDim,
     backgroundBlur: backgroundBlur ?? this.backgroundBlur,
     freeFocus: freeFocus ?? this.freeFocus,
+    bellSound: bellSound ?? this.bellSound,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderMinutes: reminderMinutes ?? this.reminderMinutes,
   );
 
   Map<String, dynamic> toJson() => {
@@ -152,6 +168,9 @@ class AppSettings {
     'backgroundDim': backgroundDim,
     'backgroundBlur': backgroundBlur,
     'freeFocus': freeFocus,
+    'bellSound': bellSound.name,
+    'reminderEnabled': reminderEnabled,
+    'reminderMinutes': reminderMinutes,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> j) {
@@ -182,6 +201,9 @@ class AppSettings {
       backgroundDim: v('backgroundDim', d.backgroundDim),
       backgroundBlur: v('backgroundBlur', d.backgroundBlur),
       freeFocus: b('freeFocus', d.freeFocus),
+      bellSound: BellSound.fromName(j['bellSound'] as String?),
+      reminderEnabled: b('reminderEnabled', d.reminderEnabled),
+      reminderMinutes: i('reminderMinutes', d.reminderMinutes),
     );
   }
 }

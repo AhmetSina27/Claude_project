@@ -136,7 +136,34 @@ class PomodoroController extends ChangeNotifier {
     if (_settings.backgroundId == 'custom' && !hasCustomBackground) {
       _settings = _settings.copyWith(backgroundId: 'none');
     }
+    _onboarded = _storage.loadString('onboarded') == '1';
+    _syncReminder();
     notifyListeners();
+  }
+
+  // ---------- İlk açılış rehberi ----------
+
+  bool _onboarded = true;
+
+  /// İlk açılış rehberi görüldü mü?
+  bool get onboarded => _onboarded;
+
+  void completeOnboarding() {
+    _onboarded = true;
+    _storage.saveString('onboarded', '1');
+    unawaited(_notifications.requestPermission());
+    _askedNotificationPermission = true;
+    notifyListeners();
+  }
+
+  // ---------- Günlük hatırlatma ----------
+
+  void _syncReminder() {
+    if (_settings.reminderEnabled) {
+      _notifications.scheduleDailyReminder(_settings.reminderMinutes, skipToday: today.focusSessions > 0);
+    } else {
+      _notifications.cancelDailyReminder();
+    }
   }
 
   /// Cihazdan arka plan görseli seçtirir. Seçilirse hemen uygulanır.
@@ -260,6 +287,9 @@ class PomodoroController extends ChangeNotifier {
     s.focusSeconds += elapsed.inSeconds;
     if (completed) {
       s.focusSessions++;
+      if (_settings.reminderEnabled) {
+        _notifications.scheduleDailyReminder(_settings.reminderMinutes, skipToday: true);
+      }
       activeTask?.pomodoros++;
       _saveTasks();
     }
@@ -434,7 +464,7 @@ class PomodoroController extends ChangeNotifier {
       final playSoundInApp = !_inBackground || !_notifications.canSchedule;
       if (playSoundInApp && _settings.bellEnabled) {
         if (_phase.isBreak) {
-          _audio.bell(_settings.bellVolume); // Teneffüs zili
+          _audio.bell(_settings.bellVolume, _settings.bellSound); // Teneffüs zili
         } else {
           _audio.chime(_settings.bellVolume);
         }
@@ -532,7 +562,20 @@ class PomodoroController extends ChangeNotifier {
       _focusMode.disable();
       _dndActive = false;
     }
-    if (_inBackground) _scheduleEndNotification();
+    if (_inBackground) {
+      _scheduleEndNotification();
+      _showLiveTimer();
+    }
+  }
+
+  /// Android: arka plandayken bildirim çubuğunda kalan (ya da geçen) süre.
+  void _showLiveTimer() {
+    if (!_running) return;
+    if (isFree) {
+      _notifications.showLiveTimer(anchor: _now().subtract(_freeElapsed()), countDown: false, title: 'Serbest odak');
+    } else if (_endAt != null) {
+      _notifications.showLiveTimer(anchor: _endAt!, countDown: true, title: _phase.label);
+    }
   }
 
   void _applyStoppedSideEffects() {
@@ -543,6 +586,7 @@ class PomodoroController extends ChangeNotifier {
       _dndActive = false;
     }
     _notifications.cancel();
+    _notifications.hideLiveTimer();
   }
 
   void _scheduleEndNotification() {
@@ -557,8 +601,10 @@ class PomodoroController extends ChangeNotifier {
     _inBackground = bg;
     if (bg) {
       _scheduleEndNotification();
+      _showLiveTimer();
     } else {
       _notifications.cancel();
+      _notifications.hideLiveTimer();
       if (_running) _tick();
       notifyListeners();
     }
@@ -607,6 +653,7 @@ class PomodoroController extends ChangeNotifier {
     final old = _settings;
     _settings = s;
     _storage.saveSettings(s);
+    if (old.reminderEnabled != s.reminderEnabled || old.reminderMinutes != s.reminderMinutes) _syncReminder();
     _completedInCycle = _completedInCycle.clamp(0, s.longBreakInterval);
     if (!_running &&
         _minutesFor(_phase) != _minutesForSettings(old, _phase) &&

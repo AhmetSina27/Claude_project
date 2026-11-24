@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app.dart';
 import '../util/turkce.dart';
+import '../data/ambient.dart';
 import '../data/backgrounds.dart';
 import '../scenes/scenes.dart';
 import '../state/pomodoro_controller.dart';
@@ -396,9 +397,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: s.bellEnabled,
                       onChanged: (v) {
                         set(s.copyWith(bellEnabled: v));
-                        if (v) c.audio.bell(s.bellVolume);
+                        if (v) c.audio.bell(s.bellVolume, s.bellSound);
                       },
                     ),
+                    if (s.bellEnabled)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: SegmentedButton<BellSound>(
+                          segments: [
+                            for (final b in BellSound.values)
+                              ButtonSegment(value: b, label: Text(b.label), icon: Icon(b.icon)),
+                          ],
+                          selected: {s.bellSound},
+                          onSelectionChanged: (v) {
+                            set(s.copyWith(bellSound: v.first));
+                            c.audio.bell(s.bellVolume, v.first);
+                          },
+                        ),
+                      ),
                     if (s.bellEnabled)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -409,7 +425,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Slider(
                                 value: s.bellVolume,
                                 onChanged: (v) => set(s.copyWith(bellVolume: v)),
-                                onChangeEnd: (v) => c.audio.bell(v),
+                                onChangeEnd: (v) => c.audio.bell(v, s.bellSound),
                               ),
                             ),
                           ],
@@ -431,6 +447,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                           : null,
                     ),
+                  ],
+                ),
+              ),
+
+              header('Günlük hatırlatma'),
+              Card(
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Her gün hatırlat'),
+                      subtitle: const Text('O gün henüz çalışmadıysan seçtiğin saatte bildirim gelir'),
+                      value: s.reminderEnabled,
+                      onChanged: (v) => set(s.copyWith(reminderEnabled: v)),
+                    ),
+                    if (s.reminderEnabled)
+                      ListTile(
+                        leading: const Icon(Icons.alarm_rounded),
+                        title: const Text('Hatırlatma saati'),
+                        trailing: Text(
+                          '${(s.reminderMinutes ~/ 60).toString().padLeft(2, '0')}:'
+                          '${(s.reminderMinutes % 60).toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                        ),
+                        onTap: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay(hour: s.reminderMinutes ~/ 60, minute: s.reminderMinutes % 60),
+                            helpText: 'Hatırlatma saati',
+                            cancelText: 'Vazgeç',
+                            confirmText: 'Tamam',
+                            builder: (ctx, child) => MediaQuery(
+                              data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+                              child: child!,
+                            ),
+                          );
+                          if (picked != null) set(s.copyWith(reminderMinutes: picked.hour * 60 + picked.minute));
+                        },
+                      ),
                   ],
                 ),
               ),

@@ -162,6 +162,53 @@ def main():
         add_event(tick, ev, s * SR)
     write("tiktak", tick, peak=.35, soften=4000)
 
+    # --- Sınav salonu: sessiz salon, kâğıtta kalem cızırtısı, ara sıra sayfa çevirme ---
+    room = shaped_noise(L, lp(260, 1)) * 0.12
+    exam = room.copy()
+    t_all = 0.4
+    while t_all < 29.0:
+        dur = rng.uniform(1.0, 3.5)
+        n = int(SR * dur)
+        tt = np.arange(n) / SR
+        # Yazı: kısa darbelerden oluşan cızırtı (saniyede 6-9 harf darbesi)
+        rate = rng.uniform(6, 9)
+        strokes = np.clip(np.sin(2 * np.pi * rate * tt + rng.uniform(0, 6)) , 0, 1) ** 2
+        strokes *= 0.6 + 0.4 * np.abs(np.sin(2 * np.pi * rate * 0.37 * tt))
+        scratch = filt(rng.standard_normal(n), bp(1800, 5000)) * strokes
+        scratch *= np.clip(tt / 0.15, 0, 1) * np.clip((dur - tt) / 0.2, 0, 1)
+        add_event(exam, scratch * rng.uniform(0.05, 0.09), int(t_all * SR))
+        t_all += dur + rng.uniform(0.6, 2.5)
+    for _ in range(3):
+        n = int(SR * 0.5)
+        tt = np.arange(n) / SR
+        swish = filt(rng.standard_normal(n), bp(500, 3500)) * np.sin(np.pi * tt / tt[-1]) ** 1.5
+        add_event(exam, swish * 0.12, rng.integers(L))
+    write("sinav", exam, peak=.4, soften=5000)
+
+    # --- Guguklu saat: ahşap sarkaçlı saatin tok tik takı ---
+    wood = shaped_noise(L, lp(200)) * 0.008
+    for sec in range(30):
+        d = int(SR * 0.06)
+        tt = np.arange(d) / SR
+        f0 = 620 if sec % 2 == 0 else 470
+        body = (np.sin(2 * np.pi * f0 * tt) + 0.5 * np.sin(2 * np.pi * f0 * 2.1 * tt)) * np.exp(-tt / 0.012)
+        click = filt(rng.standard_normal(d), bp(1500, 4000)) * np.exp(-tt / 0.002) * 0.4
+        add_event(wood, (body + click) * 0.8, sec * SR)
+    write("guguklu", wood, peak=.35, soften=4000)
+
+    # --- Guguk: oturum sonu için guguklu saat kuşu (3 kez "gu-guk") ---
+    D = int(SR * 3.4)
+    gk = np.zeros(D)
+    for rep in range(3):
+        for j, f0 in enumerate((740.0, 587.0)):
+            n = int(SR * 0.32)
+            tt = np.arange(n) / SR
+            tone = np.sin(2 * np.pi * f0 * tt) + 0.25 * np.sin(2 * np.pi * f0 * 2 * tt) + 0.08 * np.sin(2 * np.pi * f0 * 3 * tt)
+            envl = np.clip(tt / 0.04, 0, 1) * np.clip((0.32 - tt) / 0.12, 0, 1)
+            start = int(SR * (rep * 1.05 + j * 0.36))
+            gk[start:start + n] += tone * envl
+    write("guguk", gk, peak=.6, soften=0)
+
     # --- Teneffüs zili (okul zili) ---
     D = int(SR * 3.2)
     t = np.arange(D) / SR

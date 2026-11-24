@@ -22,7 +22,7 @@ class FakeAudio extends AudioService {
   @override
   Future<void> pauseAmbient() async => events.add('pause');
   @override
-  Future<void> bell(double volume) async => events.add('bell');
+  Future<void> bell(double volume, [BellSound sound = BellSound.okul]) async => events.add('bell:${sound.name}');
   @override
   Future<void> chime(double volume) async => events.add('chime');
   @override
@@ -40,6 +40,16 @@ class FakeNotifications extends NotificationService {
   Future<void> showNow(String title, String body) async {}
   @override
   Future<void> cancel() async {}
+  final reminders = <(int, bool)>[];
+  @override
+  Future<void> scheduleDailyReminder(int minutes, {required bool skipToday}) async =>
+      reminders.add((minutes, skipToday));
+  @override
+  Future<void> cancelDailyReminder() async {}
+  @override
+  Future<void> showLiveTimer({required DateTime anchor, required bool countDown, required String title}) async {}
+  @override
+  Future<void> hideLiveTimer() async {}
 }
 
 class FakeBackgrounds extends BackgroundStore {
@@ -64,6 +74,7 @@ void main() {
   late DateTime now;
   late FakeAudio audio;
   late FakeFocusMode dnd;
+  late FakeNotifications notes;
 
   Future<PomodoroController> make({AppSettings settings = const AppSettings(keepScreenOn: false)}) async {
     SharedPreferences.setMockInitialValues({});
@@ -74,7 +85,7 @@ void main() {
     final c = PomodoroController(
       storage: storage,
       audio: audio,
-      notifications: FakeNotifications(),
+      notifications: notes = FakeNotifications(),
       focusMode: dnd,
       backgrounds: FakeBackgrounds(storage),
       clock: () => now,
@@ -106,7 +117,7 @@ void main() {
     expect(c.isRunning, isFalse);
     expect(c.today.focusSessions, 1);
     expect(c.today.focusSeconds, 25 * 60);
-    expect(audio.events, contains('bell'));
+    expect(audio.events, contains('bell:okul'));
     expect(c.pendingCelebration, isNotNull);
     expect(c.pendingCelebration!.today.focusSessions, 1);
     expect(c.activeTask!.pomodoros, 1);
@@ -235,5 +246,24 @@ void main() {
     expect(c.phase, Phase.focus);
     expect(c.today.focusSessions, 0);
     expect(c.display, Duration.zero);
+  });
+
+  testWidgets('seçilen guguk zili odak sonunda çalar', (tester) async {
+    final c = await make(settings: const AppSettings(keepScreenOn: false, bellSound: BellSound.guguk));
+    await c.start();
+    await advance(tester, const Duration(minutes: 25));
+    expect(audio.events, contains('bell:guguk'));
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('günlük hatırlatma: odak bitince bugünkü hatırlatma atlanır', (tester) async {
+    final c = await make(
+      settings: const AppSettings(keepScreenOn: false, reminderEnabled: true, reminderMinutes: 20 * 60),
+    );
+    expect(notes.reminders.last, (20 * 60, false)); // bugün henüz çalışılmadı
+    await c.start();
+    await advance(tester, const Duration(minutes: 25));
+    expect(notes.reminders.last, (20 * 60, true)); // bugün çalışıldı, yarına kaydı
+    await tester.pump(const Duration(seconds: 3));
   });
 }
