@@ -19,7 +19,7 @@ jobs:
     name: iPhone / iPad (.ipa)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -43,18 +43,31 @@ jobs:
     name: Android (.apk)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --release
+      - name: Android derle
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee build.log
+      - name: Hata özeti
+        if: failure()
+        shell: bash
+        run: |
+          # Hata satırlarını herkese açık bir nota yaz (kayıtlar yalnızca giriş yapanlara açık).
+          grep -inE "what went wrong|error:|exception|failed|could not|unresolved|requires" -A4 build.log | grep -v "^--$" | head -80 > err.txt || true
+          [ -s err.txt ] || tail -60 build.log > err.txt
+          msg=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' err.txt)
+          echo "::error title=Android derleme hatası::$msg"
       - run: cp build/app/outputs/flutter-apk/app-release.apk OdaklanmaZamani.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -65,7 +78,7 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
