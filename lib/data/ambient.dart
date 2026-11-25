@@ -12,6 +12,9 @@ enum AmbientSound {
   kulube('Karlı kulübe', Icons.ac_unit_rounded, 'kulube'),
   dalga('Okyanus dalgaları', Icons.waves_rounded, 'dalga'),
   kahverengi('Kahverengi gürültü', Icons.graphic_eq_rounded, 'kahverengi'),
+  gece('Gece böcekleri', Icons.nightlight_round, 'gece'),
+  ruzgar('Rüzgâr', Icons.air_rounded, 'ruzgar'),
+  sualti('Su altı', Icons.bubble_chart_rounded, 'sualti'),
   sinav('Sınav salonu', Icons.edit_note_rounded, 'sinav'),
   tiktak('Tik tak', Icons.watch_later_rounded, 'tiktak'),
   guguklu('Guguklu saat', Icons.access_time_filled_rounded, 'guguklu');

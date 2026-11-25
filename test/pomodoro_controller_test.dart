@@ -266,4 +266,15 @@ void main() {
     expect(notes.reminders.last, (20 * 60, true)); // bugün çalışıldı, yarına kaydı
     await tester.pump(const Duration(seconds: 3));
   });
+
+  testWidgets('kısa mola süresi ayarlanınca bekleyen mola yeni süreye geçer', (tester) async {
+    final c = await make();
+    c.selectPhase(Phase.shortBreak);
+    c.setBreakDuration(Phase.shortBreak, 12);
+    expect(c.settings.shortBreakMinutes, 12);
+    expect(c.display, const Duration(minutes: 12));
+    c.setFocusDuration(37);
+    expect(c.settings.focusMinutes, 37);
+    expect(c.display, const Duration(minutes: 12)); // mola sürerken odak süresi sayacı değiştirmez
+  });
 }

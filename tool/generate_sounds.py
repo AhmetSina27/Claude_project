@@ -162,28 +162,103 @@ def main():
         add_event(tick, ev, s * SR)
     write("tiktak", tick, peak=.35, soften=4000)
 
-    # --- Sınav salonu: sessiz salon, kâğıtta kalem cızırtısı, ara sıra sayfa çevirme ---
-    room = shaped_noise(L, lp(260, 1)) * 0.12
-    exam = room.copy()
-    t_all = 0.4
-    while t_all < 29.0:
-        dur = rng.uniform(1.0, 3.5)
+    # --- Sınav salonu / kütüphane (60 sn): kalem, silgi, sayfa çevirme, uzaktan öksürük ---
+    # Olaylar bir zaman çizelgesine dizilir; aynı anda iki olay olmaz (gerçek bir sınav salonu gibi).
+    L2 = 60 * SR
+    exam = shaped_noise(L2, lp(260, 1)) * 0.10
+
+    def reverb(x, secs=0.35, amount=0.35):
+        n = int(SR * secs)
+        ir = rng.standard_normal(n) * np.exp(-np.arange(n) / SR / (secs / 4))
+        ir = filt(ir, lp(2500)) * amount / np.abs(ir).max()
+        out = np.convolve(x, ir)[: len(x) + n]
+        out[: len(x)] += x
+        return out
+
+    def writing(dur):
         n = int(SR * dur)
         tt = np.arange(n) / SR
-        # Yazı: kısa darbelerden oluşan cızırtı (saniyede 6-9 harf darbesi)
         rate = rng.uniform(6, 9)
-        strokes = np.clip(np.sin(2 * np.pi * rate * tt + rng.uniform(0, 6)) , 0, 1) ** 2
+        strokes = np.clip(np.sin(2 * np.pi * rate * tt + rng.uniform(0, 6)), 0, 1) ** 2
         strokes *= 0.6 + 0.4 * np.abs(np.sin(2 * np.pi * rate * 0.37 * tt))
-        scratch = filt(rng.standard_normal(n), bp(1800, 5000)) * strokes
-        scratch *= np.clip(tt / 0.15, 0, 1) * np.clip((dur - tt) / 0.2, 0, 1)
-        add_event(exam, scratch * rng.uniform(0.05, 0.09), int(t_all * SR))
-        t_all += dur + rng.uniform(0.6, 2.5)
-    for _ in range(3):
-        n = int(SR * 0.5)
+        x = filt(rng.standard_normal(n), bp(1800, 5000)) * strokes
+        return x * np.clip(tt / 0.15, 0, 1) * np.clip((dur - tt) / 0.2, 0, 1) * rng.uniform(0.05, 0.08)
+
+    def eraser():
+        dur = rng.uniform(0.8, 1.5)
+        n = int(SR * dur)
         tt = np.arange(n) / SR
-        swish = filt(rng.standard_normal(n), bp(500, 3500)) * np.sin(np.pi * tt / tt[-1]) ** 1.5
-        add_event(exam, swish * 0.12, rng.integers(L))
-    write("sinav", exam, peak=.4, soften=5000)
+        rub = (0.4 + 0.6 * np.abs(np.sin(2 * np.pi * rng.uniform(6, 8) * tt))) ** 2
+        x = filt(rng.standard_normal(n), bp(500, 2200)) * rub
+        return x * np.sin(np.pi * tt / tt[-1]) ** .5 * 0.09
+
+    def page_turn():
+        n = int(SR * 0.6)
+        tt = np.arange(n) / SR
+        x = filt(rng.standard_normal(n), bp(500, 3500)) * np.sin(np.pi * tt / tt[-1]) ** 1.5
+        return x * 0.14
+
+    def cough():
+        out = np.zeros(int(SR * 0.9))
+        for k in range(rng.integers(1, 3)):
+            n = int(SR * rng.uniform(0.18, 0.26))
+            tt = np.arange(n) / SR
+            f0 = rng.uniform(150, 210)
+            buzz = np.sign(np.sin(2 * np.pi * f0 * tt)) * 0.3
+            exc = rng.standard_normal(n) + buzz
+            x = filt(exc, bp(350, 1600)) * np.clip(tt / 0.01, 0, 1) * np.exp(-tt / 0.07)
+            st = int(SR * k * 0.32)
+            out[st:st + n] += x
+        out = filt(out, lp(1800))
+        return reverb(out, 0.4, 0.5) * 0.10 / (np.abs(out).max() + 1e-9)
+
+    events = (['yaz'] * 9) + (['silgi'] * 3) + (['sayfa'] * 4) + (['oksuruk'] * 2)
+    rng.shuffle(events)
+    t_now = 0.6
+    for ev in events:
+        if ev == 'yaz':
+            x = writing(rng.uniform(1.5, 3.5))
+        elif ev == 'silgi':
+            x = eraser()
+        elif ev == 'sayfa':
+            x = page_turn()
+        else:
+            x = cough()
+        if t_now * SR + len(x) >= L2 - SR * 0.4:
+            break
+        add_event(exam, x, int(t_now * SR))
+        t_now += len(x) / SR + rng.uniform(0.7, 2.2)
+    write("sinav", exam, peak=.6, soften=5000)
+
+    # --- Gece böcekleri: farklı hızlarda cırcır böcekleri + çok hafif rüzgâr ---
+    night = shaped_noise(L, bp(100, 700)) * slow_env(L, 3, .2, .6) * 0.25
+    for k, (fc, period, vol) in enumerate([(4300, .72, .10), (3900, .95, .07), (4700, .58, .05), (4100, 1.3, .06)]):
+        tchirp = rng.uniform(0, period)
+        while tchirp < 30:
+            for pulse in range(3):
+                n = int(SR * 0.018)
+                tt = np.arange(n) / SR
+                ev = np.sin(2 * np.pi * fc * tt) * np.sin(np.pi * tt / tt[-1]) * vol * rng.uniform(.7, 1)
+                add_event(night, ev, int((tchirp + pulse * 0.033) * SR))
+            tchirp += period * rng.uniform(.9, 1.1)
+    write("gece", night, peak=.32, soften=6000)
+
+    # --- Rüzgâr: yavaşça güçlenip zayıflayan, tiz olmayan rüzgâr ---
+    t = np.arange(L) / L
+    gust = 0.35 + 0.65 * (0.5 - 0.5 * np.cos(2 * np.pi * 3 * t + 1)) * slow_env(L, 4, .6, 1)
+    wind = shaped_noise(L, bp(120, 1100, 1)) * gust
+    wind += shaped_noise(L, bp(400, 900, 3)) * gust ** 2 * 0.25
+    write("ruzgar", wind, peak=.4, soften=2500)
+
+    # --- Su altı: derin, boğuk uğultu ve ara sıra yumuşak kabarcıklar ---
+    deep = shaped_noise(L, lp(220, 2)) * slow_env(L, 2, .7, 1)
+    for _ in range(40):
+        n = int(SR * rng.uniform(0.04, 0.09))
+        tt = np.arange(n) / SR
+        f0 = rng.uniform(250, 600)
+        ev = np.sin(2 * np.pi * f0 * (1 + 1.8 * tt / tt[-1]) * tt) * np.sin(np.pi * tt / tt[-1]) * rng.uniform(.05, .12)
+        add_event(deep, ev, rng.integers(L))
+    write("sualti", deep, peak=.45, soften=1500)
 
     # --- Guguklu saat: ahşap sarkaçlı saatin tok tik takı ---
     wood = shaped_noise(L, lp(200)) * 0.008

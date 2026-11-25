@@ -216,7 +216,7 @@ class _TimerSection extends StatelessWidget {
         final landscape = box.maxWidth >= 700 && box.maxWidth > box.maxHeight * 1.15;
         final hasTaskLine = c.phase == Phase.focus && task != null;
         // Saatin dışındaki öğelerin kapladığı yaklaşık yükseklik.
-        final chrome = landscape ? (hasTaskLine ? 200.0 : 172.0) : 350.0;
+        final chrome = landscape ? (hasTaskLine ? 200.0 : 172.0) : 368.0;
         const cards = 3;
         final byHeight = (box.maxHeight - chrome) / 1.18;
         final byWidth = (box.maxWidth - 24) / cards;
@@ -251,9 +251,28 @@ class _TimerSection extends StatelessWidget {
                 trUpper(c.isFree ? 'Serbest odak' : c.phase.label),
                 style: t.labelMedium?.copyWith(letterSpacing: 2.5, color: muted, fontWeight: FontWeight.w700),
               ),
+              if (c.isPristine && !c.isFree)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.touch_app_rounded, size: 14, color: muted),
+                      const SizedBox(width: 4),
+                      Text('Süreyi değiştirmek için sayaca dokun', style: t.bodySmall?.copyWith(color: muted)),
+                    ],
+                  ),
+                ),
             ],
             SizedBox(height: landscape ? 10 : 14),
-            FlipClock(duration: c.display, maxCardSize: card, glass: c.settings.backgroundId != 'none'),
+            Tooltip(
+              message: c.isRunning || c.isFree ? '' : 'Süreyi değiştirmek için dokun',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: c.isRunning || c.isFree ? null : () => showCustomDurationDialog(context, c),
+                child: FlipClock(duration: c.display, maxCardSize: card, glass: c.settings.backgroundId != 'none'),
+              ),
+            ),
             SizedBox(height: landscape ? 8 : 14),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: landscape ? card * 3 : 520),

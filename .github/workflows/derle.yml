@@ -4,6 +4,7 @@
 #   - ios-ipad-iphone:  imzasız .ipa (Windows'ta Sideloadly ile iPad/iPhone'a yüklenir)
 #   - android-apk:      telefona/tablete doğrudan kurulabilen .apk
 #   - windows:          Windows uygulaması (.zip, içindeki .exe çalıştırılır)
+#   - web:              GitHub Pages üzerinde herkese açık web sitesi (Settings → Pages → Source: GitHub Actions)
 name: Derle
 
 on:
@@ -93,3 +94,36 @@ jobs:
         with:
           name: windows
           path: OdaklanmaZamani-Windows.zip
+
+  web:
+    name: Web sitesi (GitHub Pages)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.yayin.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Web derle
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - name: Paylaşım önizlemesi için site adresini yaz
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          URL="https://$OWNER.github.io/${{ github.event.repository.name }}/"
+          sed -i "s#__SITE_URL__#$URL#g" build/web/index.html
+          echo "Site adresi: $URL"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+      - id: yayin
+        uses: actions/deploy-pages@v4

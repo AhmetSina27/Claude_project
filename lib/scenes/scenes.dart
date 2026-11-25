@@ -37,16 +37,36 @@ enum Scene {
   /// "Moda göre" seçeneğinde ortam sesine uyan sahne.
   static Scene forSound(AmbientSound sound) => switch (sound) {
     AmbientSound.doga => Scene.gol,
-    AmbientSound.orman => Scene.orman,
+    AmbientSound.orman => Scene.kiraz,
     AmbientSound.yagmur => Scene.orman,
     AmbientSound.ates => Scene.somine,
     AmbientSound.kulube => Scene.pencere,
     AmbientSound.dalga => Scene.deniz,
     AmbientSound.kahverengi => Scene.uzay,
-    AmbientSound.tiktak => Scene.kutuphane,
+    AmbientSound.gece => Scene.gece,
+    AmbientSound.ruzgar => Scene.kuzey,
+    AmbientSound.sualti => Scene.sualti,
     AmbientSound.sinav => Scene.kutuphane,
+    AmbientSound.tiktak => Scene.kutuphane,
     AmbientSound.guguklu => Scene.pencere,
-    AmbientSound.none => Scene.gece,
+    AmbientSound.none => Scene.sakin,
+  };
+
+  /// Sahne seçildiğinde birlikte gelen ortam sesi.
+  AmbientSound get sound => switch (this) {
+    Scene.gece => AmbientSound.gece,
+    Scene.kuzey => AmbientSound.ruzgar,
+    Scene.somine => AmbientSound.ates,
+    Scene.gol => AmbientSound.doga,
+    Scene.orman => AmbientSound.yagmur,
+    Scene.pencere => AmbientSound.kulube,
+    Scene.deniz => AmbientSound.dalga,
+    Scene.sakin => AmbientSound.kahverengi,
+    Scene.kiraz => AmbientSound.orman,
+    Scene.kutuphane => AmbientSound.sinav,
+    Scene.uzay => AmbientSound.kahverengi,
+    Scene.sualti => AmbientSound.sualti,
+    Scene.lavanta => AmbientSound.gece,
   };
 
   /// Sahne bu sesin görsel efektini kendisi çiziyorsa, üstüne ayrıca efekt eklenmez.

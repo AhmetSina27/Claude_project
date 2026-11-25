@@ -1,11 +1,11 @@
 {
     "name": "Odaklanma Zamanı",
-    "short_name": "Odaklanma Zamanı",
+    "short_name": "Odaklanma",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#151A33",
-    "theme_color": "#F0664C",
-    "description": "A new Flutter project.",
+    "theme_color": "#151A33",
+    "description": "Çevirmeli saat, hareketli sahneler ve sakin seslerle odaklan. Geliştirici: Ahmet Sina Kurt",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
@@ -31,5 +31,6 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "lang": "tr"
 }

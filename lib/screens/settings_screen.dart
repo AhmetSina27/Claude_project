@@ -265,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _BgTile(
                               label: sc.label,
                               selected: s.backgroundId == 'scene:${sc.name}',
-                              onTap: () => set(s.copyWith(backgroundId: 'scene:${sc.name}')),
+                              onTap: () => set(s.copyWith(backgroundId: 'scene:${sc.name}', focusSound: sc.sound)),
                               child: SizedBox.expand(child: SceneView(scene: sc, animate: false)),
                             ),
                           for (final p in backgroundPresets)
@@ -537,6 +537,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (v) => set(s.copyWith(keepScreenOn: v)),
                     ),
                   ],
+                ),
+              ),
+              header('Hakkında'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset('assets/icon/icon.png', width: 64, height: 64),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Odaklanma Zamanı', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 2),
+                            Text('Geliştirici: Ahmet Sina Kurt', style: t.bodyMedium),
+                            Text('Sürüm 1.0.0', style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

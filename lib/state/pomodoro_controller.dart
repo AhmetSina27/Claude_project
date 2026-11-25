@@ -10,6 +10,7 @@ import '../models/day_stats.dart';
 import '../models/phase.dart';
 import '../models/settings.dart';
 import '../models/task.dart';
+import '../scenes/scenes.dart';
 import '../services/audio_service.dart';
 import '../services/background_store.dart';
 import '../services/focus_mode_service.dart';
@@ -137,6 +138,16 @@ class PomodoroController extends ChangeNotifier {
       _settings = _settings.copyWith(backgroundId: 'none');
     }
     _onboarded = _storage.loadString('onboarded') == '1';
+    // Sürüm 2: sahne seçildiğinde ses de sahneye uyar. Daha önce sahne seçmiş kullanıcılar için bir kez eşle.
+    if (_storage.loadString('sahneSesEsli') != '1') {
+      final id = _settings.backgroundId;
+      if (id.startsWith('scene:')) {
+        final scene = Scene.fromName(id.substring(6));
+        if (scene != null) _settings = _settings.copyWith(focusSound: scene.sound);
+        _storage.saveSettings(_settings);
+      }
+      _storage.saveString('sahneSesEsli', '1');
+    }
     _syncReminder();
     notifyListeners();
   }
@@ -534,6 +545,21 @@ class PomodoroController extends ChangeNotifier {
     _storage.saveSettings(_settings);
     if (_phase == Phase.focus) _remaining = total;
     _persistTimer();
+    notifyListeners();
+  }
+
+  /// Kısa ya da uzun mola süresini değiştirir; o mola şu an bekliyorsa sayaç yeni süreye ayarlanır.
+  void setBreakDuration(Phase p, int minutes) {
+    if (!p.isBreak) return;
+    final v = minutes.clamp(1, 90);
+    _settings = p == Phase.shortBreak
+        ? _settings.copyWith(shortBreakMinutes: v)
+        : _settings.copyWith(longBreakMinutes: v);
+    _storage.saveSettings(_settings);
+    if (_phase == p && !_running) {
+      _remaining = total;
+      _persistTimer();
+    }
     notifyListeners();
   }
 

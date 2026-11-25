@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../app.dart';
 import '../models/day_stats.dart';
+import '../models/phase.dart';
 import '../state/pomodoro_controller.dart';
 
 /// Odak süresi için hızlı seçim: hazır süreler, özel süre ve serbest (ileri sayan) mod.
@@ -41,7 +42,7 @@ class DurationChips extends StatelessWidget {
         chip(
           isCustom ? formatMinutes(m) : 'Özel',
           isCustom,
-          () => showCustomDurationDialog(context, c),
+          () => showCustomDurationDialog(context, c, phase: Phase.focus),
           icon: Icons.tune_rounded,
         ),
         chip('Serbest', c.isFree, () => c.setFocusDuration(null), icon: Icons.all_inclusive_rounded),
@@ -70,21 +71,39 @@ String formatMinutes(int m) {
 }
 
 /// Saat ve dakika seçtiren özel süre penceresi.
-Future<void> showCustomDurationDialog(BuildContext context, PomodoroController c) async {
-  var h = c.settings.focusMinutes ~/ 60;
-  var m = c.settings.focusMinutes % 60;
+/// [phase] verilmezse o anki aşamanın (odak, kısa mola, uzun mola) süresi ayarlanır.
+Future<void> showCustomDurationDialog(BuildContext context, PomodoroController c, {Phase? phase}) async {
+  final p = phase ?? c.phase;
+  final current = switch (p) {
+    Phase.focus => c.settings.focusMinutes,
+    Phase.shortBreak => c.settings.shortBreakMinutes,
+    Phase.longBreak => c.settings.longBreakMinutes,
+  };
+  final maxMinutes = p == Phase.focus ? PomodoroController.maxFocusMinutes : 90;
+  final quick = p == Phase.focus ? const [10, 20, 30, 40, 50, 75] : const [3, 5, 10, 15, 20, 30];
+  var h = current ~/ 60;
+  var m = current % 60;
   final result = await showDialog<int>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) {
         final total = h * 60 + m;
-        Widget wheel(String label, int value, int max, int step, ValueChanged<int> onChanged) => Column(
+        void setTotal(int v) => setState(() {
+          final t = v.clamp(0, maxMinutes);
+          h = t ~/ 60;
+          m = t % 60;
+        });
+        Widget arrow(IconData icon, String tip, int delta) => GestureDetector(
+          onLongPress: () => setTotal(total + delta * 5),
+          child: IconButton.filledTonal(
+            tooltip: '$tip (basılı tut: 5)',
+            onPressed: (total + delta >= 0 && total + delta <= maxMinutes) ? () => setTotal(total + delta) : null,
+            icon: Icon(icon),
+          ),
+        );
+        Widget wheel(String label, int value, int unit) => Column(
           children: [
-            IconButton.filledTonal(
-              tooltip: '$label artır',
-              onPressed: value + step <= max ? () => onChanged(value + step) : null,
-              icon: const Icon(Icons.keyboard_arrow_up_rounded),
-            ),
+            arrow(Icons.keyboard_arrow_up_rounded, '$label artır', unit),
             const SizedBox(height: 6),
             Text(
               value.toString().padLeft(2, '0'),
@@ -98,38 +117,35 @@ Future<void> showCustomDurationDialog(BuildContext context, PomodoroController c
             ),
             Text(label, style: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: 1.5)),
             const SizedBox(height: 6),
-            IconButton.filledTonal(
-              tooltip: '$label azalt',
-              onPressed: value - step >= 0 ? () => onChanged(value - step) : null,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-            ),
+            arrow(Icons.keyboard_arrow_down_rounded, '$label azalt', -unit),
           ],
         );
         return AlertDialog(
-          title: const Text('Odak süresi'),
-          content: Row(
+          title: Text('${p.label} süresi'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              wheel(
-                'SAAT',
-                h,
-                PomodoroController.maxFocusMinutes ~/ 60,
-                1,
-                (v) => setState(() {
-                  h = v;
-                  if (h * 60 + m > PomodoroController.maxFocusMinutes) m = 0;
-                }),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (p == Phase.focus) ...[
+                    wheel('SAAT', h, 60),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(':', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                  wheel('DAKİKA', p == Phase.focus ? m : total, 1),
+                ],
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text(':', style: TextStyle(fontSize: 48, fontWeight: FontWeight.w700)),
-              ),
-              wheel(
-                'DAKİKA',
-                m,
-                h * 60 >= PomodoroController.maxFocusMinutes ? 0 : 55,
-                5,
-                (v) => setState(() => m = v),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final q in quick) ActionChip(label: Text(formatMinutes(q)), onPressed: () => setTotal(q)),
+                ],
               ),
             ],
           ),
@@ -144,5 +160,13 @@ Future<void> showCustomDurationDialog(BuildContext context, PomodoroController c
       },
     ),
   );
-  if (result != null) c.setFocusDuration(result);
+  if (result == null) return;
+  switch (p) {
+    case Phase.focus:
+      c.setFocusDuration(result);
+    case Phase.shortBreak:
+      c.setBreakDuration(Phase.shortBreak, result);
+    case Phase.longBreak:
+      c.setBreakDuration(Phase.longBreak, result);
+  }
 }
