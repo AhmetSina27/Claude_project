@@ -4,7 +4,7 @@
 #   - ios-ipad-iphone:  imzasız .ipa (Windows'ta Sideloadly ile iPad/iPhone'a yüklenir)
 #   - android-apk:      telefona/tablete doğrudan kurulabilen .apk
 #   - windows:          Windows uygulaması (.zip, içindeki .exe çalıştırılır)
-#   - web:              GitHub Pages üzerinde herkese açık web sitesi (Settings → Pages → Source: GitHub Actions)
+#   - web:              GitHub Pages üzerinde herkese açık web sitesi (gh-pages dalından yayınlanır)
 name: Derle
 
 on:
@@ -99,12 +99,7 @@ jobs:
     name: Web sitesi (GitHub Pages)
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.yayin.outputs.page_url }}
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
@@ -120,10 +115,15 @@ jobs:
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           URL="https://$OWNER.github.io/${{ github.event.repository.name }}/"
           sed -i "s#__SITE_URL__#$URL#g" build/web/index.html
+          rm -rf build/web/canvaskit build/web/flutter.js.map
+          touch build/web/.nojekyll
           echo "Site adresi: $URL"
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: build/web
-      - id: yayin
-        uses: actions/deploy-pages@v4
+      - name: gh-pages dalına yayınla
+        run: |
+          cd build/web
+          git init -q -b gh-pages
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Web sitesi: ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" gh-pages
