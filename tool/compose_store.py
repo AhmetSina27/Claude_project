@@ -9,6 +9,9 @@ import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+sys.path.insert(0, os.path.dirname(__file__))
+import devices as dv  # noqa: E402
+
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 RAW = os.path.join(ROOT, 'app_store/ham')
 OSWALD = os.path.join(ROOT, 'assets/fonts/Oswald-Variable.ttf')
@@ -116,36 +119,25 @@ def background(raw, W, H):
     return bg
 
 
+def device_shadow(canvas, dev, pos, blur=40, alpha=150, dy=30):
+    """Cihazın altına yumuşak gölge düşürür ve cihazı yerleştirir."""
+    sh = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
+    a = dev.split()[3].point(lambda v: int(v * alpha / 255))
+    blk = Image.new('RGBA', dev.size, (0, 0, 0, 255))
+    blk.putalpha(a)
+    sh.alpha_composite(blk, (pos[0], pos[1] + dy))
+    canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(blur)))
+    canvas.alpha_composite(dev, pos)
+
+
 def iphone(raw, title, sub):
     W, H = SIZES['iphone']
     c = background(raw, W, H)
     caption(c, title, sub, 130, W - 120, 92, 44)
-    dh = 2150
-    dw = int(dh * raw.width / raw.height)
-    bez = 30
-    x0, y0 = (W - dw) // 2, H - dh - 120
-    outer = (x0 - bez, y0 - bez, x0 + dw + bez, y0 + dh + bez)
-    shadow(c, outer, 150, 50)
-    ImageDraw.Draw(c).rounded_rectangle(outer, 150, fill=(18, 18, 22, 255), outline=(70, 70, 80, 255), width=4)
-    # Durum çubuğu + uygulama ekranı (gerçek iPhone'daki gibi uygulama çubuğun altından başlar)
-    sb = int(dh * 62 / 956)
-    app_h = dh - sb
-    app = raw.resize((dw, app_h), Image.LANCZOS)
-    screen = Image.new('RGB', (dw, dh), raw.getpixel((raw.width // 2, 2)))
-    screen.paste(app, (0, sb))
-    sd = ImageDraw.Draw(screen)
-    sf = font(OSWALD, 40, 600)
-    sd.text((dw * .12, sb * .3), '9:41', font=sf, fill=(245, 245, 245))
-    bx = dw * .80
-    for k in range(4):
-        hh = 10 + k * 6
-        sd.rounded_rectangle((bx + k * 13, sb * .62 - hh, bx + k * 13 + 8, sb * .62), 2, fill=(245, 245, 245))
-    sd.rounded_rectangle((bx + 62, sb * .3, bx + 112, sb * .62), 7, outline=(245, 245, 245), width=3)
-    sd.rounded_rectangle((bx + 67, sb * .3 + 5, bx + 100, sb * .62 - 5), 3, fill=(245, 245, 245))
-    c.paste(screen.convert('RGBA'), (x0, y0), rounded_mask((dw, dh), 122))
-    # Dynamic Island
-    iw, ih = 230, 66
-    ImageDraw.Draw(c).rounded_rectangle(((W - iw) / 2, y0 + 30, (W + iw) / 2, y0 + 30 + ih), ih / 2, fill=(0, 0, 0, 255))
+    dev = dv.iphone(dv.with_status_bar(raw), 1040)
+    if dev.height > H - 520:
+        dev = dev.resize((int(dev.width * (H - 520) / dev.height), H - 520), Image.LANCZOS)
+    device_shadow(c, dev, ((W - dev.width) // 2, H - dev.height - 90))
     return c.convert('RGB')
 
 
@@ -153,15 +145,8 @@ def ipad(raw, title, sub):
     W, H = SIZES['ipad']
     c = background(raw, W, H)
     caption(c, title, sub, 110, W - 600, 96, 46)
-    dh = 1460
-    dw = int(dh * raw.width / raw.height)
-    bez = 40
-    x0, y0 = (W - dw) // 2, H - dh - 110
-    outer = (x0 - bez, y0 - bez, x0 + dw + bez, y0 + dh + bez)
-    shadow(c, outer, 80, 60)
-    ImageDraw.Draw(c).rounded_rectangle(outer, 80, fill=(20, 20, 24, 255), outline=(80, 80, 90, 255), width=5)
-    screen = raw.resize((dw, dh), Image.LANCZOS).convert('RGBA')
-    c.paste(screen, (x0, y0), rounded_mask((dw, dh), 44))
+    dev = dv.ipad(raw, 2080)
+    device_shadow(c, dev, ((W - dev.width) // 2, H - dev.height - 90), blur=50)
     return c.convert('RGB')
 
 
@@ -169,24 +154,8 @@ def mac(raw, title, sub):
     W, H = SIZES['mac']
     c = background(raw, W, H)
     caption(c, title, sub, 90, W - 700, 88, 42)
-    sw = 1900
-    sh = int(sw * raw.height / raw.width)
-    bez = 34
-    x0 = (W - sw) // 2
-    y0 = H - sh - 150
-    outer = (x0 - bez, y0 - bez, x0 + sw + bez, y0 + sh + bez * .8)
-    shadow(c, outer, 46, 60)
-    d = ImageDraw.Draw(c)
-    d.rounded_rectangle(outer, 46, fill=(16, 16, 20, 255), outline=(78, 78, 88, 255), width=4)
-    screen = raw.resize((sw, sh), Image.LANCZOS).convert('RGBA')
-    c.paste(screen, (x0, y0), rounded_mask((sw, sh), 14))
-    # Gövde (klavye kenarı)
-    by = outer[3]
-    base = (x0 - bez - 150, by, x0 + sw + bez + 150, by + 44)
-    d.rectangle(base, fill=(176, 178, 186, 255))
-    d.rounded_rectangle((base[0], base[3] - 14, base[2], base[3] + 14), 14, fill=(140, 142, 150, 255))
-    notch = 300
-    d.rounded_rectangle(((W - notch) / 2, by, (W + notch) / 2, by + 18), 9, fill=(120, 122, 130, 255))
+    dev = dv.macbook(raw, 2300)
+    device_shadow(c, dev, ((W - dev.width) // 2, H - dev.height - 70), blur=50)
     return c.convert('RGB')
 
 
