@@ -1,6 +1,8 @@
 # Odaklanma Zamanı
 
 Telefon, tablet ve bilgisayarda çalışan, kişiselleştirilebilir bir odaklanma (Pomodoro) zamanlayıcısı.
+Web: https://ahmetsina27.github.io/ODAKLANMA-ZAMANI-UYGULAMASI/
+
 Flutter ile tek kod tabanından Android, iOS, iPadOS, Windows, macOS, Linux ve web için derlenir.
 
 ## Özellikler
