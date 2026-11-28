@@ -45,12 +45,20 @@ class FocusModeService {
     } catch (_) {}
   }
 
+  /// Odak başlarken gösterilen kısa hatırlatma.
+  String get startReminder => switch (defaultTargetPlatform) {
+    TargetPlatform.iOS => 'Bildirimleri susturmak için: sağ üstten Denetim Merkezi → Odak → Rahatsız Etme',
+    TargetPlatform.macOS => 'Bildirimleri susturmak için: Denetim Merkezi → Odak → Rahatsız Etme',
+    TargetPlatform.windows => 'Bildirimleri susturmak için: Ayarlar → Sistem → Bildirimler → Rahatsız etme',
+    _ => 'Bildirimleri susturmak için cihazının Rahatsız Etme modunu aç',
+  };
+
   /// Desteklenmeyen platformlarda kullanıcıya gösterilecek açıklama.
   String get manualHint => switch (defaultTargetPlatform) {
     TargetPlatform.iOS =>
-      'iPhone ve iPad\'de uygulamalar Odak modunu kendisi açamaz. Ayarlar > Odak > Rahatsız Etme > '
-          'Otomatik olarak aç bölümüne "Odaklanma Zamanı" uygulamasını ekle; uygulamayı açtığında '
-          'bildirimler susar.',
+      'iPhone ve iPad\'de Apple, uygulamaların bildirimleri kendisi kapatmasına izin vermez. '
+          'Odak başlarken sağ üstten Denetim Merkezi\'ni açıp Odak > Rahatsız Etme\'ye dokun. '
+          'Otomatik olsun istersen: Ayarlar > Odak > Rahatsız Etme > Zamanlama Ekle (ders saatlerin).',
     TargetPlatform.macOS =>
       'macOS\'ta Kontrol Merkezi > Odak > Rahatsız Etme\'yi aç. Sistem Ayarları > Odak bölümünden '
           'zamanlama da ekleyebilirsin.',

@@ -524,10 +524,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     if (s.doNotDisturb && !c.focusMode.isSupported)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: Text(
-                          c.focusMode.manualHint,
-                          style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: OutlinedButton.icon(
+                          onPressed: () => showFocusSetupGuide(context),
+                          icon: const Icon(Icons.auto_fix_high_rounded),
+                          label: const Text('Otomatik susturmayı kur (1 dakika)'),
                         ),
                       ),
                     SwitchListTile(
@@ -654,4 +655,56 @@ class _BgTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// iPhone/iPad/Mac: Rahatsız Etme'nin uygulama açılınca kendiliğinden açılması için adım adım rehber.
+Future<void> showFocusSetupGuide(BuildContext context) {
+  final apple = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS;
+  Widget step(int n, String text) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 13,
+          child: Text('$n', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(padding: const EdgeInsets.only(top: 3), child: Text(text)),
+        ),
+      ],
+    ),
+  );
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Bildirimleri otomatik sustur'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: apple
+              ? [
+                  const Text(
+                    'Apple, uygulamaların bildirimleri kendisi kapatmasına izin vermez. Ama bir kez ayarlarsan '
+                    'Odaklanma Zamanı\'nı açtığın anda Rahatsız Etme kendiliğinden açılır, çıkınca kapanır.',
+                  ),
+                  const SizedBox(height: 12),
+                  step(1, 'Ayarlar uygulamasını aç → Odak → Rahatsız Etme.'),
+                  step(2, '"Zamanlama Ekle"ye dokun → "Uygulama"yı seç.'),
+                  step(3, 'Listeden "Odaklanma Zamanı"nı seç. Hepsi bu!'),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Not: Uygulamayı tarayıcıdan (web linki) kullanıyorsan bu listede görünmez. O zaman odak '
+                    'başlarken sağ üstten Denetim Merkezi → Odak → Rahatsız Etme\'ye dokun.',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                ]
+              : [Text(AppScope.read(context).focusMode.manualHint)],
+        ),
+      ),
+      actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Anladım'))],
+    ),
+  );
 }

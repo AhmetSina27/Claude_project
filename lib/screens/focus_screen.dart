@@ -7,6 +7,7 @@ import '../app.dart';
 import '../data/ambient.dart';
 import '../models/phase.dart';
 import '../widgets/ambient_background.dart';
+import 'home_screen.dart' show toggleWithReminder;
 import '../widgets/background_image.dart';
 import '../widgets/flip_clock.dart';
 import '../widgets/timer_shortcuts.dart';
@@ -112,7 +113,7 @@ class _FocusScreenState extends State<FocusScreen> {
 
     return TimerShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.space): c.toggle,
+        const SingleActivator(LogicalKeyboardKey.space): () => toggleWithReminder(context, c),
         const SingleActivator(LogicalKeyboardKey.keyR): c.reset,
         const SingleActivator(LogicalKeyboardKey.keyS): c.skip,
         const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).maybePop(),
@@ -242,7 +243,7 @@ class _FocusScreenState extends State<FocusScreen> {
                                       button: true,
                                       label: c.isRunning ? 'Duraklat' : 'Başlat',
                                       child: InkWell(
-                                        onTap: c.toggle,
+                                        onTap: () => toggleWithReminder(context, c),
                                         borderRadius: BorderRadius.circular(24),
                                         child: Container(
                                           width: 132,

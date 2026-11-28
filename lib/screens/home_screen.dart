@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return TimerShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.space): c.toggle,
+        const SingleActivator(LogicalKeyboardKey.space): () => toggleWithReminder(context, c),
         const SingleActivator(LogicalKeyboardKey.keyR): c.reset,
         const SingleActivator(LogicalKeyboardKey.keyS): c.skip,
         const SingleActivator(LogicalKeyboardKey.keyF): () => openFocusScreen(context),
@@ -306,7 +306,7 @@ class _TimerSection extends StatelessWidget {
                   width: 160,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
-                    onPressed: c.toggle,
+                    onPressed: () => toggleWithReminder(context, c),
                     icon: Icon(c.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded),
                     label: Text(
                       c.isRunning ? 'Duraklat' : (c.isPristine ? 'Başlat' : 'Devam et'),
@@ -491,5 +491,29 @@ class _Stat extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Başlat/duraklat; odak başlarken ve bildirimler uygulama tarafından kapatılamıyorsa
+/// (iPad, iPhone, Mac, Windows, web) Rahatsız Etme'yi açmayı hatırlatır.
+void toggleWithReminder(BuildContext context, PomodoroController c) {
+  final starting = !c.isRunning && c.phase == Phase.focus;
+  c.toggle();
+  if (starting && c.settings.doNotDisturb && !c.focusMode.isSupported) {
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.do_not_disturb_on_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(c.focusMode.startReminder)),
+            ],
+          ),
+          duration: const Duration(seconds: 7),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 }
