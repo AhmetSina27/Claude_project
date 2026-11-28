@@ -133,7 +133,7 @@ void main() {
     expect(c.phase, Phase.focus);
     expect(c.today.breaks, 1);
     expect(c.today.breakSeconds, 300);
-    expect(audio.events, contains('chime'));
+    expect(audio.events, contains('bell:okul')); // mola bitince de zil çalar
   });
 
   testWidgets('4 pomodorodan sonra uzun molaya geçilir', (tester) async {

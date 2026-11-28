@@ -393,7 +393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     SwitchListTile(
                       title: const Text('Teneffüs zili'),
-                      subtitle: const Text('Odak bitince zil, mola bitince çan çalar'),
+                      subtitle: const Text('Odak bitince ve mola bitince zil çalar'),
                       value: s.bellEnabled,
                       onChanged: (v) {
                         set(s.copyWith(bellEnabled: v));

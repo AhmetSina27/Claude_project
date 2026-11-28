@@ -13,7 +13,7 @@ Flutter ile tek kod tabanından Android, iOS, iPadOS, Windows, macOS, Linux ve w
 | 2 | Odakta bildirimlerin kapanması | Android: odak süresince sistem "Rahatsız Etme" modu açılır, bitince eski haline döner. iOS/macOS/Windows: işletim sistemi izin vermediği için kullanıcıya kurulum yönergesi gösterilir |
 | 3 | Arka planda doğa, orman, yağmur, ateş… | 8 sakin ses: yağmur, şömine, dere, orman, okyanus dalgaları, karlı kulübe, kahverengi gürültü, tik tak. Her biri bir görsel efekt ve hareketli sahneyle eşleşir |
 | 4 | Günlük etüt ve mola sayımı | Ana ekrandaki "Bugün" kartı ve İstatistikler ekranı (son 7 gün grafiği, seri) |
-| 5 | Teneffüs zili | Odak bitince okul zili, mola bitince yumuşak çan |
+| 5 | Teneffüs zili | Odak bitince ve mola bitince zil (okul zili ya da guguk) |
 | 6 | Odakta seçilen moda göre ses | Odak ve mola için ayrı ses/efekt seçimi; tik tak dahil |
 | 7 | Odak sonunda tebrik ekranı | Konfeti ve alkış eşliğinde günlük etüt süresi, mola sayısı/süresi, hedef ilerlemesi ve ünlü birinin motivasyon sözü |
 

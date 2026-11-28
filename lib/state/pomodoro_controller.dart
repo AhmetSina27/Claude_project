@@ -474,11 +474,8 @@ class PomodoroController extends ChangeNotifier {
     if (!silent) {
       final playSoundInApp = !_inBackground || !_notifications.canSchedule;
       if (playSoundInApp && _settings.bellEnabled) {
-        if (_phase.isBreak) {
-          _audio.bell(_settings.bellVolume, _settings.bellSound); // Teneffüs zili
-        } else {
-          _audio.chime(_settings.bellVolume);
-        }
+        // Odak bitince de mola bitince de seçilen zil çalar (okul zili ya da guguk).
+        _audio.bell(_settings.bellVolume, _settings.bellSound);
       }
       if (_pendingCelebration != null && _settings.applauseEnabled && !_inBackground) {
         Future.delayed(const Duration(milliseconds: 2600), () => _audio.applause(_settings.bellVolume));
