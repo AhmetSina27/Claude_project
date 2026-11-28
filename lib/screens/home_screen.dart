@@ -161,22 +161,66 @@ class _TopBar extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final today = c.today;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 8, 4),
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 4),
       child: Row(
         children: [
-          Text.rich(
-            TextSpan(
-              children: [
-                const TextSpan(text: 'Odaklanma '),
-                TextSpan(
-                  text: 'Zamanı',
-                  style: TextStyle(color: color),
-                ),
-              ],
-            ),
-            style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -.5),
+          // Logo + uygulama adı + geliştirici adı (her zaman sol üstte)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: Image.asset('assets/icon/icon.png', width: 36, height: 36),
           ),
-          const Spacer(),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Builder(
+              builder: (context) {
+                final wide = MediaQuery.sizeOf(context).width >= 700;
+                final title = Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(text: 'Odaklanma '),
+                      TextSpan(
+                        text: 'Zamanı',
+                        style: TextStyle(color: color),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -.5, height: 1.1),
+                );
+                final name = Text(
+                  'Ahmet Sina Kurt',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: .3,
+                  ),
+                );
+                if (wide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(child: title),
+                      Container(
+                        width: 1,
+                        height: 18,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .25),
+                      ),
+                      Flexible(child: name),
+                    ],
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [title, name],
+                );
+              },
+            ),
+          ),
           if (MediaQuery.sizeOf(context).width >= 480)
             Tooltip(
               message: 'Bugün',
