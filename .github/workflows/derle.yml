@@ -109,7 +109,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Web derle
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=BUILD=${GITHUB_SHA::7}
+        run: flutter build web --release --no-web-resources-cdn --base-href "/${{ github.event.repository.name }}/" --dart-define=BUILD=${GITHUB_SHA::7}
       - name: Paylaşım önizlemesi için site adresini yaz
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -121,7 +121,7 @@ jobs:
           sed -i "s#src=\"flutter_bootstrap.js\"#src=\"flutter_bootstrap.js?v=$V\"#" build/web/index.html
           grep -q "main.dart.js?v=$V" build/web/flutter_bootstrap.js
           grep -q "flutter_bootstrap.js?v=$V" build/web/index.html
-          rm -rf build/web/canvaskit build/web/flutter.js.map
+          rm -rf build/web/flutter.js.map build/web/canvaskit/*.symbols build/web/canvaskit/skwasm* build/web/canvaskit/wimp*
           touch build/web/.nojekyll
           echo "Site adresi: $URL"
       - name: gh-pages dalına yayınla
