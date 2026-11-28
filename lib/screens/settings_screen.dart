@@ -558,7 +558,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Text('Odaklanma Zamanı', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 2),
                             Text('Geliştirici: Ahmet Sina Kurt', style: t.bodyMedium),
-                            Text('Sürüm 1.0.0', style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                            Text(
+                              const String.fromEnvironment('BUILD').isEmpty
+                                  ? 'Sürüm 1.0.0'
+                                  : 'Sürüm 1.0.0 · derleme ${const String.fromEnvironment('BUILD')}',
+                              style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
                           ],
                         ),
                       ),

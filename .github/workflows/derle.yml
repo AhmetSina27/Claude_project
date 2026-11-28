@@ -109,12 +109,18 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Web derle
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=BUILD=${GITHUB_SHA::7}
       - name: Paylaşım önizlemesi için site adresini yaz
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           URL="https://$OWNER.github.io/${{ github.event.repository.name }}/"
           sed -i "s#__SITE_URL__#$URL#g" build/web/index.html
+          # Tarayıcı eski dosyaları kullanmasın: her yayında dosya adlarına sürüm ekle
+          V=${GITHUB_SHA::7}
+          sed -i "s#\"mainJsPath\":\"main.dart.js\"#\"mainJsPath\":\"main.dart.js?v=$V\"#" build/web/flutter_bootstrap.js
+          sed -i "s#src=\"flutter_bootstrap.js\"#src=\"flutter_bootstrap.js?v=$V\"#" build/web/index.html
+          grep -q "main.dart.js?v=$V" build/web/flutter_bootstrap.js
+          grep -q "flutter_bootstrap.js?v=$V" build/web/index.html
           rm -rf build/web/canvaskit build/web/flutter.js.map
           touch build/web/.nojekyll
           echo "Site adresi: $URL"
