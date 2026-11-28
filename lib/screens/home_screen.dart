@@ -10,6 +10,8 @@ import '../state/pomodoro_controller.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/background_image.dart';
 import '../widgets/flip_clock.dart';
+import '../widgets/goals.dart';
+import '../widgets/timer_shortcuts.dart';
 import '../widgets/sound_picker.dart';
 import 'celebration_screen.dart';
 import 'focus_screen.dart';
@@ -65,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final sound = c.phase == Phase.focus ? c.settings.focusSound : c.settings.breakSound;
     final bgImage = backgroundFor(c.settings, c, sound);
 
-    return CallbackShortcuts(
+    return TimerShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.space): c.toggle,
         const SingleActivator(LogicalKeyboardKey.keyR): c.reset,
@@ -208,13 +210,12 @@ class _TimerSection extends StatelessWidget {
     final c = AppScope.of(context);
     final t = Theme.of(context).textTheme;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    final task = c.activeTask;
 
     return LayoutBuilder(
       builder: (context, box) {
         // Yatay geniş ekranda (tablet, bilgisayar) üst kısım tek satıra iner, sayaç büyür.
         final landscape = box.maxWidth >= 700 && box.maxWidth > box.maxHeight * 1.15;
-        final hasTaskLine = c.phase == Phase.focus && task != null;
+        final hasTaskLine = c.phase == Phase.focus;
         // Saatin dışındaki öğelerin kapladığı yaklaşık yükseklik.
         final chrome = landscape ? (hasTaskLine ? 200.0 : 172.0) : 368.0;
         const cards = 3;
@@ -286,10 +287,13 @@ class _TimerSection extends StatelessWidget {
                 ),
               ),
             ),
-            if (c.phase == Phase.focus && task != null)
+            if (c.phase == Phase.focus)
               Padding(
                 padding: EdgeInsets.only(top: landscape ? 6 : 12),
-                child: Text(task.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodyLarge),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: GoalLine(color: color),
+                ),
               ),
             SizedBox(height: landscape ? 12 : 20),
             Row(
@@ -450,7 +454,9 @@ class _SideSection extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 16),
-      const _TaskCard(),
+      const Card(
+        child: Padding(padding: EdgeInsets.all(16), child: GoalsPanel()),
+      ),
     ];
     if (!wide) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
     final cards = items.where((w) => w is! SizedBox).toList();
@@ -483,112 +489,6 @@ class _Stat extends StatelessWidget {
           ),
           Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
-      ),
-    );
-  }
-}
-
-class _TaskCard extends StatefulWidget {
-  const _TaskCard();
-
-  @override
-  State<_TaskCard> createState() => _TaskCardState();
-}
-
-class _TaskCardState extends State<_TaskCard> {
-  final _input = TextEditingController();
-
-  @override
-  void dispose() {
-    _input.dispose();
-    super.dispose();
-  }
-
-  void _add() {
-    AppScope.read(context).addTask(_input.text);
-    _input.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppScope.of(context);
-    final t = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final open = c.tasks.where((x) => !x.done).length;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('Görevler', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                const Spacer(),
-                if (c.tasks.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text('$open açık', style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _input,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _add(),
-                      decoration: const InputDecoration(
-                        hintText: 'Ne üzerinde çalışacaksın?',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.tonal(onPressed: _add, child: const Text('Ekle')),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            if (c.tasks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Henüz görev yok. İlk görevini yukarıdan ekle.',
-                  style: t.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ),
-            for (final task in c.tasks)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                selected: task.id == c.activeTask?.id,
-                selectedTileColor: scheme.primary.withValues(alpha: .08),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                leading: Checkbox(value: task.done, onChanged: (_) => c.toggleTaskDone(task)),
-                title: Text(
-                  task.title,
-                  style: TextStyle(
-                    decoration: task.done ? TextDecoration.lineThrough : null,
-                    color: task.done ? scheme.onSurfaceVariant : null,
-                    fontWeight: task.id == c.activeTask?.id ? FontWeight.w600 : null,
-                  ),
-                ),
-                subtitle: task.pomodoros > 0 ? Text('${task.pomodoros} oturum') : null,
-                trailing: IconButton(
-                  tooltip: 'Sil',
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  onPressed: () => c.deleteTask(task),
-                ),
-                onTap: () => c.selectTask(task),
-              ),
-          ],
-        ),
       ),
     );
   }

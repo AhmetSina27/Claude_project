@@ -9,6 +9,7 @@ import '../models/phase.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/background_image.dart';
 import '../widgets/flip_clock.dart';
+import '../widgets/timer_shortcuts.dart';
 import '../widgets/sound_picker.dart';
 
 Future<void> openFocusScreen(BuildContext context) => Navigator.of(context).push(
@@ -109,7 +110,7 @@ class _FocusScreenState extends State<FocusScreen> {
       style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .06)),
     );
 
-    return CallbackShortcuts(
+    return TimerShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.space): c.toggle,
         const SingleActivator(LogicalKeyboardKey.keyR): c.reset,

@@ -638,12 +638,21 @@ class PomodoroController extends ChangeNotifier {
 
   // ---------- Görevler ----------
 
-  void addTask(String title) {
+  /// Yeni hedef ekler. Etkin bir hedef yoksa yeni hedef etkin olur.
+  FocusTask? addTask(String title, {int target = 1}) {
     final t = title.trim();
-    if (t.isEmpty) return;
-    final task = FocusTask(id: _now().microsecondsSinceEpoch.toString(), title: t);
+    if (t.isEmpty) return null;
+    final task = FocusTask(id: _now().microsecondsSinceEpoch.toString(), title: t, target: target.clamp(1, 20));
     _tasks.add(task);
     if (activeTask == null) _activeTaskId = task.id;
+    _saveTasks();
+    notifyListeners();
+    return task;
+  }
+
+  void updateTask(FocusTask task, {String? title, int? target}) {
+    if (title != null && title.trim().isNotEmpty) task.title = title.trim();
+    if (target != null) task.target = target.clamp(1, 20);
     _saveTasks();
     notifyListeners();
   }
@@ -653,6 +662,7 @@ class PomodoroController extends ChangeNotifier {
     if (task.done && task.id == _activeTaskId) {
       _activeTaskId = _tasks.where((t) => !t.done).map((t) => t.id).firstOrNull;
     }
+    if (!task.done && activeTask == null) _activeTaskId = task.id;
     _saveTasks();
     notifyListeners();
   }
@@ -664,9 +674,23 @@ class PomodoroController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteTask(FocusTask task) {
-    _tasks.removeWhere((t) => t.id == task.id);
-    if (_activeTaskId == task.id) _activeTaskId = null;
+  /// Hedefi siler; geri almak için silinen hedef ve konumu döner.
+  (FocusTask, int, bool)? deleteTask(FocusTask task) {
+    final i = _tasks.indexWhere((t) => t.id == task.id);
+    if (i < 0) return null;
+    final wasActive = _activeTaskId == task.id;
+    _tasks.removeAt(i);
+    if (wasActive) _activeTaskId = _tasks.where((t) => !t.done).map((t) => t.id).firstOrNull;
+    _saveTasks();
+    notifyListeners();
+    return (task, i, wasActive);
+  }
+
+  /// Silinen hedefi eski yerine geri koyar.
+  void restoreTask((FocusTask, int, bool) removed) {
+    final (task, i, wasActive) = removed;
+    _tasks.insert(i.clamp(0, _tasks.length), task);
+    if (wasActive) _activeTaskId = task.id;
     _saveTasks();
     notifyListeners();
   }

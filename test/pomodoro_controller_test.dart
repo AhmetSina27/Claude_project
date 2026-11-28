@@ -277,4 +277,19 @@ void main() {
     expect(c.settings.focusMinutes, 37);
     expect(c.display, const Duration(minutes: 12)); // mola sürerken odak süresi sayacı değiştirmez
   });
+
+  testWidgets('hedef: ekle, düzenle, sil ve geri al', (tester) async {
+    final c = await make();
+    final a = c.addTask('Fizik tekrarı', target: 3)!;
+    final b = c.addTask('Tarih okuma')!;
+    expect(c.activeTask!.id, a.id);
+    expect(a.target, 3);
+    c.updateTask(b, title: 'Tarih: Kurtuluş Savaşı', target: 2);
+    expect(b.title, 'Tarih: Kurtuluş Savaşı');
+    final removed = c.deleteTask(a)!;
+    expect(c.activeTask!.id, b.id); // silinen etkin hedefin yerine sıradaki geçer
+    c.restoreTask(removed);
+    expect(c.tasks.first.id, a.id);
+    expect(c.activeTask!.id, a.id);
+  });
 }
