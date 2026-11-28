@@ -260,6 +260,40 @@ def main():
         add_event(deep, ev, rng.integers(L))
     write("sualti", deep, peak=.45, soften=1500)
 
+    # --- Güneşli gün: hafif esinti ve seyrek, neşeli kuş cıvıltıları ---
+    sunny = shaped_noise(L, bp(150, 900)) * slow_env(L, 3, .25, .7) * 0.4
+    for _ in range(22):
+        base = rng.uniform(2400, 3800)
+        start = rng.integers(L)
+        for k in range(rng.integers(2, 5)):
+            n = int(SR * rng.uniform(0.06, 0.14))
+            tt = np.arange(n) / SR
+            sweep = base * (1 + rng.uniform(-.25, .3) * tt / tt[-1])
+            ev = np.sin(2 * np.pi * np.cumsum(sweep) / SR + 2 * np.sin(2 * np.pi * 25 * tt)) * np.sin(np.pi * tt / tt[-1]) ** 2
+            add_event(sunny, ev * rng.uniform(.05, .1), start + int(k * SR * rng.uniform(.13, .22)))
+    write("gunes", sunny, peak=.4, soften=5000)
+
+    # --- Dolu: çatıya ve zemine vuran sert, kısa taneler + hafif yağmur ---
+    hail = shaped_noise(L, lambda f: bp(250, 4000)(f) * f ** -0.5) * 0.35
+    for _ in range(4200):
+        n = int(SR * rng.uniform(0.004, 0.012))
+        ev = filt(rng.standard_normal(n), bp(rng.uniform(900, 1800), rng.uniform(3000, 5000))) * env(n, 0.0003, n / SR / 5)
+        add_event(hail, ev * rng.uniform(.05, .3) ** 1.5, rng.integers(L))
+    write("dolu", hail, peak=.42, soften=5000)
+
+    # --- Fırtına: yoğun yağmur, güçlenen rüzgâr ve uzaktan gök gürültüsü ---
+    t = np.arange(L) / L
+    storm = shaped_noise(L, lambda f: bp(200, 4000)(f) * f ** -0.4) * 0.6
+    gusts = 0.4 + 0.6 * (0.5 - 0.5 * np.cos(2 * np.pi * 3 * t + .5)) * slow_env(L, 4, .6, 1)
+    storm += shaped_noise(L, bp(120, 900, 1)) * gusts * 0.5
+    for start_s in (4.0, 15.5, 24.0):
+        n = int(SR * rng.uniform(3.5, 5.0))
+        tt = np.arange(n) / SR
+        rumble = filt(rng.standard_normal(n), lp(110, 2)) * (np.clip(tt / 0.25, 0, 1) * np.exp(-tt / 1.4))
+        rumble *= 1 + 0.6 * np.abs(np.sin(2 * np.pi * 1.3 * tt))
+        add_event(storm, rumble * 2.2, int(start_s * SR))
+    write("firtina", storm, peak=.45, soften=3500)
+
     # --- Guguklu saat: ahşap sarkaçlı saatin tok tik takı ---
     wood = shaped_noise(L, lp(200)) * 0.008
     for sec in range(30):

@@ -20,7 +20,12 @@ enum Scene {
   kutuphane('Kütüphane', Icons.local_library_rounded, LibraryScene()),
   uzay('Uzay', Icons.public_rounded, SpaceScene()),
   sualti('Su altı', Icons.scuba_diving_rounded, UnderwaterScene()),
-  lavanta('Lavanta tarlası', Icons.spa_rounded, LavenderScene());
+  lavanta('Lavanta tarlası', Icons.spa_rounded, LavenderScene()),
+  sisli('Sisli', Icons.foggy, FoggyScene()),
+  karli('Karlı', Icons.ac_unit_rounded, SnowVillageScene()),
+  gunesli('Güneşli', Icons.wb_sunny_rounded, SunnyScene()),
+  dolu('Dolu', Icons.grain_rounded, HailScene()),
+  firtina('Fırtına', Icons.thunderstorm_rounded, StormScene());
 
   const Scene(this.label, this.icon, this.painter);
   final String label;
@@ -49,6 +54,9 @@ enum Scene {
     AmbientSound.sinav => Scene.kutuphane,
     AmbientSound.tiktak => Scene.kutuphane,
     AmbientSound.guguklu => Scene.pencere,
+    AmbientSound.gunes => Scene.gunesli,
+    AmbientSound.dolu => Scene.dolu,
+    AmbientSound.firtina => Scene.firtina,
     AmbientSound.none => Scene.sakin,
   };
 
@@ -67,6 +75,11 @@ enum Scene {
     Scene.uzay => AmbientSound.kahverengi,
     Scene.sualti => AmbientSound.sualti,
     Scene.lavanta => AmbientSound.gece,
+    Scene.sisli => AmbientSound.ruzgar,
+    Scene.karli => AmbientSound.kulube,
+    Scene.gunesli => AmbientSound.gunes,
+    Scene.dolu => AmbientSound.dolu,
+    Scene.firtina => AmbientSound.firtina,
   };
 
   /// Sahne bu sesin görsel efektini kendisi çiziyorsa, üstüne ayrıca efekt eklenmez.

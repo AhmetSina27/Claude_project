@@ -15,6 +15,9 @@ enum AmbientSound {
   gece('Gece böcekleri', Icons.nightlight_round, 'gece'),
   ruzgar('Rüzgâr', Icons.air_rounded, 'ruzgar'),
   sualti('Su altı', Icons.bubble_chart_rounded, 'sualti'),
+  gunes('Güneşli gün', Icons.wb_sunny_rounded, 'gunes'),
+  dolu('Dolu', Icons.grain_rounded, 'dolu'),
+  firtina('Fırtına', Icons.thunderstorm_rounded, 'firtina'),
   sinav('Sınav salonu', Icons.edit_note_rounded, 'sinav'),
   tiktak('Tik tak', Icons.watch_later_rounded, 'tiktak'),
   guguklu('Guguklu saat', Icons.access_time_filled_rounded, 'guguklu');

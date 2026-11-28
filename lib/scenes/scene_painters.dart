@@ -1601,3 +1601,485 @@ class LavenderScene extends ScenePainter {
     }
   }
 }
+
+// ================================================================ 14-18. Kasaba: hava durumu sahneleri
+
+/// Ortak kasaba çizimi: tepeler, evler ve ağaçlar. Hava durumuna göre renkler,
+/// efektler ve fırtınada sallanma değişir.
+abstract class VillageScene extends ScenePainter {
+  const VillageScene();
+
+  List<Color> get sky;
+  Color get hillFar;
+  Color get hillNear;
+  Color get wall;
+  Color get roof;
+  Color get windowColor;
+  bool get litWindows => false;
+  bool get snowy => false;
+
+  /// Evlerin ve ağaçların sallanma genliği (radyan). Fırtınada büyük, diğerlerinde 0.
+  double get sway => 0;
+
+  double ground(Size s) => s.height * .78;
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(c, Offset.zero & s, sky, stops: const [0, .55, 1]);
+    c.drawPath(ridge(s, .70, .06, 301), Paint()..color = hillFar);
+  }
+
+  /// Gökyüzü ile kasaba arasındaki hareketli katman (bulutlar, güneş, sis...).
+  void skyLayer(Canvas c, Size s, double t) {}
+
+  /// Kasabanın önündeki hareketli katman (yağış, şimşek...).
+  void weather(Canvas c, Size s, double t) {}
+
+  @override
+  bool get hasFront => false;
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    skyLayer(c, s, t);
+    final g = ground(s);
+    // Yakın tepe ve zemin
+    final near = Path()..moveTo(0, g);
+    for (double x = 0; x <= s.width + 8; x += 8) {
+      near.lineTo(x, g - s.height * .025 * sin(x / s.width * 3 + .7));
+    }
+    near
+      ..lineTo(s.width, s.height)
+      ..lineTo(0, s.height)
+      ..close();
+    c.drawPath(near, Paint()..color = hillNear);
+    if (snowy) {
+      final cap = Path()..moveTo(0, g);
+      for (double x = 0; x <= s.width + 8; x += 8) {
+        cap.lineTo(x, g - s.height * .025 * sin(x / s.width * 3 + .7));
+      }
+      for (double x = s.width; x >= 0; x -= 8) {
+        cap.lineTo(x, g - s.height * .025 * sin(x / s.width * 3 + .7) + s.height * .05);
+      }
+      cap.close();
+      c.drawPath(cap, Paint()..color = const Color(0xFFEFF4FA));
+    }
+    // Ağaçlar ve evler (soldan sağa)
+    final u = s.shortestSide;
+    final items = <(double, bool, double)>[]; // (x oranı, ev mi, boyut)
+    for (var i = 0; i < 11; i++) {
+      final x = (i + .2 + rnd(i, 311) * .6) / 11;
+      final house = rnd(i, 312) > .38;
+      items.add((x, house, .8 + rnd(i, 313) * .5));
+    }
+    for (final (i, (fx, house, size)) in items.indexed) {
+      final x = fx * s.width;
+      final baseY = g - s.height * .025 * sin(fx * 3 + .7) + 2;
+      final a = sway * sin(t * (2.6 + rnd(i, 314)) + i) + sway * .5 * sin(t * 7.3 + i * 2);
+      if (house) {
+        _house(c, Offset(x, baseY), u * .11 * size, u * .085 * size, a * .25, i, t);
+      } else {
+        _tree(c, Offset(x, baseY), u * .14 * size, a, i);
+      }
+    }
+    weather(c, s, t);
+  }
+
+  void _house(Canvas c, Offset base, double w, double h, double angle, int i, double t) {
+    c.save();
+    c.translate(base.dx, base.dy);
+    c.rotate(angle);
+    final wallP = Paint()..color = Color.lerp(wall, const Color(0xFF000000), rnd(i, 321) * .15)!;
+    c.drawRect(Rect.fromLTWH(-w / 2, -h, w, h), wallP);
+    final roofPath = Path()
+      ..moveTo(-w * .62, -h)
+      ..lineTo(0, -h - h * .65)
+      ..lineTo(w * .62, -h)
+      ..close();
+    // Baca ve duman
+    c.drawRect(Rect.fromLTWH(w * .18, -h - h * .62, w * .12, h * .35), Paint()..color = roof);
+    c.drawPath(roofPath, Paint()..color = Color.lerp(roof, const Color(0xFF000000), rnd(i, 322) * .2)!);
+    if (snowy) {
+      final cap = Path()
+        ..moveTo(-w * .62, -h)
+        ..lineTo(0, -h - h * .65)
+        ..lineTo(w * .62, -h)
+        ..lineTo(w * .5, -h + h * .06)
+        ..lineTo(0, -h - h * .5)
+        ..lineTo(-w * .5, -h + h * .06)
+        ..close();
+      c.drawPath(cap, Paint()..color = const Color(0xFFF2F6FB));
+      // Bacadan duman
+      final smoke = Paint();
+      for (var k = 0; k < 5; k++) {
+        final ph = ((t * .25 + k / 5 + rnd(i, 323)) % 1);
+        smoke.color = const Color(0xFFDDE3EC).withValues(alpha: (1 - ph) * .35);
+        c.drawCircle(
+          Offset(w * .24 + sin(ph * 4 + i) * w * .1 + ph * w * .3, -h - h * .65 - ph * h * 1.4),
+          w * (.05 + ph * .1),
+          smoke,
+        );
+      }
+    }
+    // Pencereler ve kapı
+    final win = Paint()..color = windowColor;
+    final ws = w * .2;
+    c.drawRect(Rect.fromLTWH(-w * .36, -h * .78, ws, ws), win);
+    c.drawRect(Rect.fromLTWH(w * .16, -h * .78, ws, ws), win);
+    if (litWindows) {
+      final flick = .8 + .2 * sin(t * 1.5 + i * 3);
+      glow(
+        c,
+        Offset(-w * .26, -h * .68),
+        ws * 2.2,
+        const Color(0xFFFFC56B).withValues(alpha: .35 * flick),
+        blend: BlendMode.plus,
+      );
+      glow(
+        c,
+        Offset(w * .26, -h * .68),
+        ws * 2.2,
+        const Color(0xFFFFC56B).withValues(alpha: .35 * flick),
+        blend: BlendMode.plus,
+      );
+    }
+    c.drawRect(
+      Rect.fromLTWH(-w * .1, -h * .45, w * .2, h * .45),
+      Paint()..color = Color.lerp(roof, const Color(0xFF000000), .35)!,
+    );
+    c.restore();
+  }
+
+  void _tree(Canvas c, Offset base, double h, double angle, int i) {
+    c.save();
+    c.translate(base.dx, base.dy);
+    c.rotate(angle);
+    c.drawRect(Rect.fromLTWH(-h * .04, -h * .45, h * .08, h * .45), Paint()..color = const Color(0xFF4A3426));
+    final crown = Color.lerp(hillNear, const Color(0xFF000000), .25)!;
+    for (final (dx, dy, r) in [(0.0, -.62, .26), (-.14, -.5, .18), (.14, -.5, .18)]) {
+      c.drawCircle(Offset(h * dx, h * dy), h * r, Paint()..color = crown);
+    }
+    if (snowy) {
+      c.drawCircle(Offset(0, -h * .78), h * .14, Paint()..color = const Color(0xFFEFF4FA));
+    }
+    c.restore();
+  }
+}
+
+// --- 14. Sisli kasaba
+class FoggyScene extends VillageScene {
+  const FoggyScene();
+  @override
+  List<Color> get sky => const [Color(0xFF8E9BA6), Color(0xFFB7C1C8), Color(0xFFCDD3D6)];
+  @override
+  Color get hillFar => const Color(0xFF9DA8AF);
+  @override
+  Color get hillNear => const Color(0xFF6D7B79);
+  @override
+  Color get wall => const Color(0xFF8A8F95);
+  @override
+  Color get roof => const Color(0xFF5E5A63);
+  @override
+  Color get windowColor => const Color(0xFFE7D9A8);
+  @override
+  bool get litWindows => true;
+
+  void _fog(Canvas c, Size s, double t, double y, double alpha, double speed, int seed) {
+    for (var i = 0; i < 5; i++) {
+      final w = s.width * (.7 + rnd(i, seed) * .6);
+      final span = s.width + w;
+      final x = (rnd(i, seed + 1) * span + t * speed * (1 + i * .25)) % span - w / 2;
+      final center = Offset(x, s.height * (y + (rnd(i, seed + 2) - .5) * .08));
+      c.drawOval(
+        Rect.fromCenter(center: center, width: w, height: s.height * .18),
+        Paint()
+          ..shader = ui.Gradient.radial(center, w / 2, [
+            Color(0xFFE6EBEE).withValues(alpha: alpha),
+            const Color(0x00E6EBEE),
+          ]),
+      );
+    }
+  }
+
+  @override
+  void skyLayer(Canvas c, Size s, double t) => _fog(c, s, t, .62, .55, 7, 401);
+
+  @override
+  void weather(Canvas c, Size s, double t) {
+    // Sokak lambaları
+    for (var i = 0; i < 4; i++) {
+      final x = s.width * (.12 + i * .26);
+      final y = ground(s) + s.height * .02;
+      final lamp = Paint()..color = const Color(0xFF3E4448);
+      c.drawRect(Rect.fromLTWH(x - 2, y - s.height * .14, 4, s.height * .14), lamp);
+      glow(
+        c,
+        Offset(x, y - s.height * .145),
+        s.shortestSide * .08,
+        const Color(0xFFFFE2A0).withValues(alpha: .55),
+        blend: BlendMode.plus,
+      );
+      c.drawCircle(Offset(x, y - s.height * .145), 5, Paint()..color = const Color(0xFFFFF1C8));
+    }
+    _fog(c, s, t, .86, .5, 4, 411);
+  }
+}
+
+// --- 15. Karlı köy
+class SnowVillageScene extends VillageScene {
+  const SnowVillageScene();
+  @override
+  List<Color> get sky => const [Color(0xFF1C2742), Color(0xFF3A4E74), Color(0xFF7D8FB0)];
+  @override
+  Color get hillFar => const Color(0xFFC9D4E4);
+  @override
+  Color get hillNear => const Color(0xFFDCE5F0);
+  @override
+  Color get wall => const Color(0xFF7A4E3A);
+  @override
+  Color get roof => const Color(0xFF4A2E2A);
+  @override
+  Color get windowColor => const Color(0xFFFFD27A);
+  @override
+  bool get litWindows => true;
+  @override
+  bool get snowy => true;
+
+  @override
+  void weather(Canvas c, Size s, double t) {
+    final p = Paint();
+    final n = (s.width * s.height / 5000).clamp(80, 260).toInt();
+    for (var i = 0; i < n; i++) {
+      final depth = rnd(i, 421);
+      final speed = 16 + depth * 50;
+      final travel = s.height + 20;
+      final y = ((t * speed + rnd(i, 422) * travel) % travel) - 10;
+      final x = (rnd(i, 423) * s.width + sin(t * (.4 + depth) + i) * (8 + depth * 16) + t * 5) % s.width;
+      p.color = Colors.white.withValues(alpha: .45 + depth * .5);
+      c.drawCircle(Offset(x, y), 1 + depth * 2.6, p);
+    }
+  }
+}
+
+// --- 16. Güneşli gün
+class SunnyScene extends VillageScene {
+  const SunnyScene();
+  @override
+  List<Color> get sky => const [Color(0xFF2F7FD0), Color(0xFF6FB3EA), Color(0xFFBFE2F7)];
+  @override
+  Color get hillFar => const Color(0xFF7FBF6A);
+  @override
+  Color get hillNear => const Color(0xFF5AA24E);
+  @override
+  Color get wall => const Color(0xFFF2E6D0);
+  @override
+  Color get roof => const Color(0xFFC6483A);
+  @override
+  Color get windowColor => const Color(0xFF6FA8D6);
+
+  @override
+  void skyLayer(Canvas c, Size s, double t) {
+    // Dönen ışınlarıyla güneş
+    final sun = Offset(s.width * .8, s.height * .18);
+    final r = s.shortestSide * .07;
+    glow(c, sun, r * 6, const Color(0xFFFFF2B0).withValues(alpha: .55));
+    c.save();
+    c.translate(sun.dx, sun.dy);
+    c.rotate(t * .08);
+    final ray = Paint()
+      ..color = const Color(0xFFFFE680).withValues(alpha: .55)
+      ..strokeWidth = r * .14
+      ..strokeCap = StrokeCap.round;
+    for (var k = 0; k < 12; k++) {
+      final a = k / 12 * 2 * pi;
+      final pulse = 1 + .12 * sin(t * 2 + k);
+      c.drawLine(Offset(cos(a), sin(a)) * r * 1.35, Offset(cos(a), sin(a)) * r * 1.9 * pulse, ray);
+    }
+    c.restore();
+    c.drawCircle(sun, r, Paint()..color = const Color(0xFFFFE066));
+    // Kayan bulutlar
+    for (var i = 0; i < 5; i++) {
+      final w = s.width * (.16 + rnd(i, 431) * .14);
+      final span = s.width + w * 2;
+      final x = (rnd(i, 432) * span + t * (8 + i * 3)) % span - w;
+      final y = s.height * (.1 + rnd(i, 433) * .3);
+      final cp = Paint()..color = Colors.white.withValues(alpha: .92);
+      for (final (dx, dy, rr) in [(0.0, 0.0, .22), (.22, -.08, .26), (.46, 0.0, .2), (.24, .06, .22)]) {
+        c.drawCircle(Offset(x + w * dx, y + w * dy), w * rr, cp);
+      }
+    }
+  }
+
+  @override
+  void weather(Canvas c, Size s, double t) {
+    // Uçan kuşlar
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF2B3A4A);
+    for (var i = 0; i < 4; i++) {
+      final ph = ((t + i * 6) % 26) / 26;
+      final x = -40 + ph * (s.width + 80);
+      final y = s.height * (.3 + i * .04) + sin(t * .8 + i) * 10;
+      final f = sin(t * 7 + i) * 5;
+      c.drawPath(
+        Path()
+          ..moveTo(x - 8, y - f)
+          ..quadraticBezierTo(x - 3, y - 3, x, y)
+          ..quadraticBezierTo(x + 3, y - 3, x + 8, y - f),
+        p,
+      );
+    }
+  }
+}
+
+// --- 17. Dolu yağışı
+class HailScene extends VillageScene {
+  const HailScene();
+  @override
+  List<Color> get sky => const [Color(0xFF2E3A3E), Color(0xFF4A5A5C), Color(0xFF6E7C78)];
+  @override
+  Color get hillFar => const Color(0xFF4E5E58);
+  @override
+  Color get hillNear => const Color(0xFF3E5246);
+  @override
+  Color get wall => const Color(0xFF8C8A84);
+  @override
+  Color get roof => const Color(0xFF4E3E3A);
+  @override
+  Color get windowColor => const Color(0xFFE8D7A0);
+  @override
+  bool get litWindows => true;
+  @override
+  double get sway => .015;
+
+  @override
+  void weather(Canvas c, Size s, double t) {
+    final g = ground(s);
+    final p = Paint()..color = const Color(0xFFF2F6F8);
+    final n = (s.width * s.height / 3200).clamp(120, 380).toInt();
+    for (var i = 0; i < n; i++) {
+      final speed = s.height * (1.6 + rnd(i, 441) * .9);
+      final period = (g + 60) / speed + .35; // düşüş + sekme
+      final ph = ((t + rnd(i, 442) * period) % period);
+      final fall = (g + 60) / speed;
+      final x0 = rnd(i, 443) * s.width;
+      final r = 1.6 + rnd(i, 444) * 2.4;
+      double x, y;
+      if (ph < fall) {
+        y = -60 + ph * speed;
+        x = x0 - ph * 40;
+      } else {
+        final b = (ph - fall) / .35; // sekme
+        y = g + 4 - sin(b * pi) * (10 + rnd(i, 445) * 18);
+        x = x0 - fall * 40 + b * (rnd(i, 446) - .5) * 30;
+      }
+      c.drawCircle(Offset(x, y), r, p..color = const Color(0xFFF2F6F8).withValues(alpha: ph < fall ? .85 : .7));
+    }
+    // Yerde biriken dolu
+    final pile = Paint()..color = const Color(0xFFE6ECEF).withValues(alpha: .55);
+    for (var i = 0; i < 120; i++) {
+      c.drawCircle(Offset(rnd(i, 447) * s.width, g + 6 + rnd(i, 448) * s.height * .2), 1.2 + rnd(i, 449) * 1.6, pile);
+    }
+  }
+}
+
+// --- 18. Fırtına: sallanan evler ve ağaçlar, şimşek, eğik sağanak
+class StormScene extends VillageScene {
+  const StormScene();
+  @override
+  List<Color> get sky => const [Color(0xFF0E1218), Color(0xFF1E2630), Color(0xFF34404A)];
+  @override
+  Color get hillFar => const Color(0xFF232C34);
+  @override
+  Color get hillNear => const Color(0xFF1C2A26);
+  @override
+  Color get wall => const Color(0xFF5E6268);
+  @override
+  Color get roof => const Color(0xFF33282A);
+  @override
+  Color get windowColor => const Color(0xFFE8C77A);
+  @override
+  bool get litWindows => true;
+  @override
+  double get sway => .09;
+
+  double _flash(double t) {
+    // Yaklaşık 7 saniyede bir çift şimşek
+    const period = 7.0;
+    final ph = t % period;
+    if (ph < .12) return 1 - ph / .12;
+    if (ph > .25 && ph < .33) return (1 - (ph - .25) / .08) * .7;
+    return 0;
+  }
+
+  @override
+  void skyLayer(Canvas c, Size s, double t) {
+    // Hızla geçen kara bulutlar
+    for (var i = 0; i < 7; i++) {
+      final w = s.width * (.35 + rnd(i, 451) * .3);
+      final span = s.width + w * 2;
+      final x = (rnd(i, 452) * span + t * (40 + i * 12)) % span - w;
+      final y = s.height * (.05 + rnd(i, 453) * .3);
+      final cp = Paint()..color = const Color(0xFF151B22).withValues(alpha: .85);
+      for (final (dx, dy, rr) in [(0.0, 0.0, .2), (.2, -.07, .24), (.42, 0.0, .2), (.22, .06, .22)]) {
+        c.drawCircle(Offset(x + w * dx, y + w * dy), w * rr, cp);
+      }
+    }
+    // Şimşek
+    final f = _flash(t);
+    if (f > 0) {
+      final cycle = (t / 7).floor();
+      var p = Offset(s.width * (.2 + rnd(cycle, 454) * .6), 0);
+      final bolt = Path()..moveTo(p.dx, p.dy);
+      for (var k = 0; k < 9; k++) {
+        p = p + Offset((rnd(cycle * 20 + k, 455) - .5) * s.width * .08, s.height * .07);
+        bolt.lineTo(p.dx, p.dy);
+      }
+      c.drawPath(
+        bolt,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xFFEAF2FF).withValues(alpha: f)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4),
+      );
+    }
+  }
+
+  @override
+  void weather(Canvas c, Size s, double t) {
+    // Rüzgârla iyice eğilmiş sağanak
+    const slant = .45;
+    final p = Paint()..strokeCap = StrokeCap.round;
+    final n = (s.width * s.height / 3600).clamp(120, 360).toInt();
+    for (var i = 0; i < n; i++) {
+      final depth = rnd(i, 461);
+      final speed = s.height * (1.8 + depth * 1.6);
+      final len = 18 + depth * 30;
+      final travel = s.height + len + s.height * slant;
+      final y = ((t * speed + rnd(i, 462) * travel) % travel) - len;
+      final x = rnd(i, 463) * (s.width + s.height * slant) - y * slant;
+      p
+        ..strokeWidth = .8 + depth * 1.4
+        ..color = const Color(0xFFB8C6D8).withValues(alpha: .2 + depth * .35);
+      c.drawLine(Offset(x, y), Offset(x - len * slant, y + len), p);
+    }
+    // Uçuşan yapraklar
+    final leaf = Paint()..color = const Color(0xFF6E8A4E).withValues(alpha: .7);
+    for (var i = 0; i < 14; i++) {
+      final life = 3 + rnd(i, 464) * 2;
+      final ph = ((t + rnd(i, 465) * life) % life) / life;
+      final x = s.width * (1.1 - ph * 1.3);
+      final y = s.height * (.4 + rnd(i, 466) * .4) + sin(ph * 12 + i) * 30;
+      c.save();
+      c.translate(x, y);
+      c.rotate(ph * 20 + i);
+      c.drawOval(const Rect.fromLTWH(-5, -2.5, 10, 5), leaf);
+      c.restore();
+    }
+    // Şimşek aydınlatması
+    final f = _flash(t);
+    if (f > 0) c.drawRect(Offset.zero & s, Paint()..color = const Color(0xFFDDE8FF).withValues(alpha: .28 * f));
+  }
+}

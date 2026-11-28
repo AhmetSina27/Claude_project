@@ -110,6 +110,9 @@ class _AmbientPainter extends CustomPainter {
       case AmbientSound.gece:
       case AmbientSound.ruzgar:
       case AmbientSound.sualti:
+      case AmbientSound.gunes:
+      case AmbientSound.dolu:
+      case AmbientSound.firtina:
         break;
       case AmbientSound.guguklu:
         _pulse(canvas, size);

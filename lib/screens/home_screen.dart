@@ -167,7 +167,7 @@ class _TopBar extends StatelessWidget {
           // Logo + uygulama adı + geliştirici adı (her zaman sol üstte)
           ClipRRect(
             borderRadius: BorderRadius.circular(9),
-            child: Image.asset('assets/icon/icon.png', width: 36, height: 36),
+            child: Image.asset('assets/icon/icon.png', width: 42, height: 42),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -192,10 +192,11 @@ class _TopBar extends StatelessWidget {
                   'Ahmet Sina Kurt',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: t.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: .3,
+                  style: (wide ? t.titleMedium : t.bodyLarge)?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .85),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .2,
+                    height: 1.15,
                   ),
                 );
                 if (wide) {
@@ -204,8 +205,8 @@ class _TopBar extends StatelessWidget {
                     children: [
                       Flexible(child: title),
                       Container(
-                        width: 1,
-                        height: 18,
+                        width: 1.5,
+                        height: 22,
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .25),
                       ),
