@@ -16,6 +16,7 @@ enum AmbientSound {
   ruzgar('Rüzgâr', Icons.air_rounded, 'ruzgar'),
   sualti('Su altı', Icons.bubble_chart_rounded, 'sualti'),
   gunes('Güneşli gün', Icons.wb_sunny_rounded, 'gunes'),
+  kar('Kar yağışı', Icons.cloudy_snowing, 'kar'),
   dolu('Dolu', Icons.grain_rounded, 'dolu'),
   firtina('Fırtına', Icons.thunderstorm_rounded, 'firtina'),
   sinav('Sınav salonu', Icons.edit_note_rounded, 'sinav'),

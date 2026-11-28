@@ -27,6 +27,10 @@ abstract class ScenePainter {
   void top(Canvas c, Size s, double t) {}
 
   bool get hasFront => true;
+
+  /// Gerçek fotoğraflı sahnelerde zemindeki fotoğrafın asset yolu. Fotoğraf yavaşça
+  /// yakınlaşıp uzaklaşır; [mid] ve [top] katmanları (kar, dolu...) üstüne çizilir.
+  String? get photo => null;
 }
 
 // ---------------------------------------------------------------- yardımcılar
@@ -1824,42 +1828,6 @@ class FoggyScene extends VillageScene {
   }
 }
 
-// --- 15. Karlı köy
-class SnowVillageScene extends VillageScene {
-  const SnowVillageScene();
-  @override
-  List<Color> get sky => const [Color(0xFF1C2742), Color(0xFF3A4E74), Color(0xFF7D8FB0)];
-  @override
-  Color get hillFar => const Color(0xFFC9D4E4);
-  @override
-  Color get hillNear => const Color(0xFFDCE5F0);
-  @override
-  Color get wall => const Color(0xFF7A4E3A);
-  @override
-  Color get roof => const Color(0xFF4A2E2A);
-  @override
-  Color get windowColor => const Color(0xFFFFD27A);
-  @override
-  bool get litWindows => true;
-  @override
-  bool get snowy => true;
-
-  @override
-  void weather(Canvas c, Size s, double t) {
-    final p = Paint();
-    final n = (s.width * s.height / 5000).clamp(80, 260).toInt();
-    for (var i = 0; i < n; i++) {
-      final depth = rnd(i, 421);
-      final speed = 16 + depth * 50;
-      final travel = s.height + 20;
-      final y = ((t * speed + rnd(i, 422) * travel) % travel) - 10;
-      final x = (rnd(i, 423) * s.width + sin(t * (.4 + depth) + i) * (8 + depth * 16) + t * 5) % s.width;
-      p.color = Colors.white.withValues(alpha: .45 + depth * .5);
-      c.drawCircle(Offset(x, y), 1 + depth * 2.6, p);
-    }
-  }
-}
-
 // --- 16. Güneşli gün
 class SunnyScene extends VillageScene {
   const SunnyScene();
@@ -1933,53 +1901,135 @@ class SunnyScene extends VillageScene {
   }
 }
 
-// --- 17. Dolu yağışı
+// --- 17. Dolu yağışı: koyu bulutlar, buz tanecikleri, sıçrayan ve biriken dolu
 class HailScene extends VillageScene {
   const HailScene();
   @override
-  List<Color> get sky => const [Color(0xFF2E3A3E), Color(0xFF4A5A5C), Color(0xFF6E7C78)];
+  List<Color> get sky => const [Color(0xFF1F2A30), Color(0xFF3F5052), Color(0xFF6C7D76)];
   @override
-  Color get hillFar => const Color(0xFF4E5E58);
+  Color get hillFar => const Color(0xFF44544F);
   @override
-  Color get hillNear => const Color(0xFF3E5246);
+  Color get hillNear => const Color(0xFF34463E);
   @override
   Color get wall => const Color(0xFF8C8A84);
   @override
   Color get roof => const Color(0xFF4E3E3A);
   @override
-  Color get windowColor => const Color(0xFFE8D7A0);
+  Color get windowColor => const Color(0xFFF0DCA0);
   @override
   bool get litWindows => true;
   @override
-  double get sway => .015;
+  double get sway => .012;
+
+  @override
+  void skyLayer(Canvas c, Size s, double t) {
+    // Uzakta sessizce çakan, bulutların içini aydınlatan ışık
+    final ph = t % 11;
+    final flash = ph < .5 ? sin(ph / .5 * pi) * .35 : 0.0;
+    // Ağır ağır akan, kabarık koyu bulutlar
+    for (var i = 0; i < 9; i++) {
+      final w = s.width * (.35 + rnd(i, 451) * .3);
+      final span = s.width + w;
+      final x = (rnd(i, 452) * span + t * (6 + rnd(i, 453) * 6)) % span - w / 2;
+      final y = s.height * (.04 + rnd(i, 454) * .3);
+      final center = Offset(x, y);
+      final base = Color.lerp(const Color(0xFF1A2226), const Color(0xFF55646A), rnd(i, 455))!;
+      final lit = Color.lerp(base, const Color(0xFFDCE6F0), flash * (1 - y / s.height))!;
+      c.drawOval(
+        Rect.fromCenter(center: center, width: w, height: w * .42),
+        Paint()..shader = ui.Gradient.radial(center, w / 2, [lit.withValues(alpha: .85), lit.withValues(alpha: 0)]),
+      );
+    }
+  }
 
   @override
   void weather(Canvas c, Size s, double t) {
     final g = ground(s);
-    final p = Paint()..color = const Color(0xFFF2F6F8);
-    final n = (s.width * s.height / 3200).clamp(120, 380).toInt();
-    for (var i = 0; i < n; i++) {
-      final speed = s.height * (1.6 + rnd(i, 441) * .9);
-      final period = (g + 60) / speed + .35; // düşüş + sekme
-      final ph = ((t + rnd(i, 442) * period) % period);
-      final fall = (g + 60) / speed;
-      final x0 = rnd(i, 443) * s.width;
-      final r = 1.6 + rnd(i, 444) * 2.4;
-      double x, y;
-      if (ph < fall) {
-        y = -60 + ph * speed;
-        x = x0 - ph * 40;
-      } else {
-        final b = (ph - fall) / .35; // sekme
-        y = g + 4 - sin(b * pi) * (10 + rnd(i, 445) * 18);
-        x = x0 - fall * 40 + b * (rnd(i, 446) - .5) * 30;
-      }
-      c.drawCircle(Offset(x, y), r, p..color = const Color(0xFFF2F6F8).withValues(alpha: ph < fall ? .85 : .7));
+    final u = s.shortestSide;
+    // Zeminde biriken beyaz dolu tabakası
+    c.drawRect(
+      Rect.fromLTWH(0, g + s.height * .01, s.width, s.height - g),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, g), Offset(0, s.height),
+            const [Color(0x00E8EEF0), Color(0x88E8EEF0), Color(0xAAD8E0E4)], const [0, .25, 1]),
+    );
+    final pile = Paint();
+    for (var i = 0; i < 260; i++) {
+      final y = g + s.height * (.015 + rnd(i, 448) * .22);
+      final depth = (y - g) / (s.height - g);
+      pile.color = Color.lerp(const Color(0xFFC9D3D8), Colors.white, rnd(i, 449))!.withValues(alpha: .8);
+      c.drawCircle(Offset(rnd(i, 447) * s.width, y), u * (.002 + depth * .005), pile);
     }
-    // Yerde biriken dolu
-    final pile = Paint()..color = const Color(0xFFE6ECEF).withValues(alpha: .55);
-    for (var i = 0; i < 120; i++) {
-      c.drawCircle(Offset(rnd(i, 447) * s.width, g + 6 + rnd(i, 448) * s.height * .2), 1.2 + rnd(i, 449) * 1.6, pile);
+    // Pencerelerin ışığını yansıtan su birikintileri
+    for (var i = 0; i < 4; i++) {
+      final center = Offset(s.width * (.15 + i * .24 + rnd(i, 456) * .05), g + s.height * (.08 + rnd(i, 457) * .1));
+      final w = u * (.16 + rnd(i, 458) * .1);
+      final r = Rect.fromCenter(center: center, width: w, height: w * .18);
+      c.drawOval(r, Paint()..color = const Color(0xFF2C3A3E));
+      c.drawOval(r.deflate(w * .02), Paint()..shader = ui.Gradient.radial(center, w * .5, [const Color(0x55F0DCA0), const Color(0x002C3A3E)]));
+      // Birikintiye düşen tanelerin halkaları
+      final ring = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+      for (var k = 0; k < 3; k++) {
+        final ph = ((t * 1.3 + rnd(i * 3 + k, 459)) % 1);
+        final rc = center + Offset((rnd(i * 3 + k, 460) - .5) * w * .6, 0);
+        ring.color = Colors.white.withValues(alpha: (1 - ph) * .5);
+        c.drawOval(Rect.fromCenter(center: rc, width: w * .25 * ph + 2, height: w * .05 * ph + 1), ring);
+      }
+    }
+    hailFall(c, s, t, g + s.height * .01, g + s.height * .21);
+  }
+}
+
+/// Düşen buz taneleri: hafif eğik, hız izli; [landTop]..[landBottom] arasında yere çarpıp seker.
+void hailFall(Canvas c, Size s, double t, double landTop, double landBottom) {
+  final u = s.shortestSide;
+  // Düşen buz taneleri: hafif eğik, hız izli; yere çarpınca sekip parlıyor
+  final n = (s.width * s.height / 4200).clamp(90, 300).toInt();
+  final streak = Paint()..strokeCap = StrokeCap.round;
+  final bead = Paint();
+  const slant = .22;
+  for (var i = 0; i < n; i++) {
+    final depth = rnd(i, 441);
+    final r = u * (.0025 + depth * .0045);
+    final speed = s.height * (1.1 + depth * 1.0);
+    final land = landTop + (landBottom - landTop) * depth;
+    final fallT = (land + 40) / speed;
+    const bounceT = .45;
+    final period = fallT + bounceT + rnd(i, 442) * .4;
+    final ph = (t + rnd(i, 443) * period) % period;
+    final x0 = rnd(i, 444) * (s.width + 200);
+    if (ph < fallT) {
+      final y = -40 + ph * speed;
+      final x = x0 - (y + 40) * slant;
+      final len = r * 7;
+      final head = Offset(x, y);
+      final tail = head - Offset(-slant, 1) * len;
+      streak
+        ..strokeWidth = r * 1.1
+        ..shader = ui.Gradient.linear(tail, head, [const Color(0x00FFFFFF), Colors.white.withValues(alpha: .5 + depth * .3)]);
+      c.drawLine(tail, head, streak);
+      bead.color = const Color(0xFFF4F9FC).withValues(alpha: .7 + depth * .3);
+      c.drawCircle(head, r, bead);
+    } else if (ph < fallT + bounceT) {
+      final b = (ph - fallT) / bounceT;
+      final xl = x0 - (land + 40) * slant;
+      final dir = rnd(i, 445) - .5;
+      final h = s.height * (.012 + depth * .03) * (1 - b * .4);
+      final p = Offset(xl + dir * b * u * .06, land - sin(b * pi) * h);
+      if (b < .15) {
+        // Çarpma anında küçük buz kıvılcımı
+        final sp = Paint()
+          ..color = Colors.white.withValues(alpha: (1 - b / .15) * .8)
+          ..strokeWidth = 1;
+        for (var k = 0; k < 4; k++) {
+          final a = -pi * (.15 + k * .23);
+          c.drawLine(Offset(xl, land), Offset(xl, land) + Offset(cos(a), sin(a)) * r * (2 + b * 20), sp);
+        }
+      }
+      bead.color = const Color(0xFFEAF2F6).withValues(alpha: .85 * (1 - b * .3));
+      c.drawCircle(p, r * .9, bead);
     }
   }
 }
@@ -2082,4 +2132,192 @@ class StormScene extends VillageScene {
     final f = _flash(t);
     if (f > 0) c.drawRect(Offset.zero & s, Paint()..color = const Color(0xFFDDE8FF).withValues(alpha: .28 * f));
   }
+}
+
+// --- 15. Kar yağışı: ay ışığında sessiz bir çam ormanı, katman katman süzülen kar
+class SnowfallScene extends ScenePainter {
+  const SnowfallScene();
+
+  static const _moon = Offset(.72, .2);
+
+  /// Dallarına kar yığılmış çam.
+  static void snowyPine(Canvas c, double x, double baseY, double h, Color tree, Color snow) {
+    c.drawPath(pine(x, baseY, h), Paint()..color = tree);
+    final w = h * .38;
+    const tiers = 5;
+    final sp = Paint()..color = snow;
+    for (var i = 0; i < tiers; i++) {
+      final ty = baseY - h * (i / tiers) * .92;
+      final tw = w * (1 - i / tiers * .75);
+      final top = max(baseY - h * ((i + 1.6) / tiers) * .92, baseY - h);
+      final cy = top + (ty - top) * .42;
+      final cw = tw * .42 * .5;
+      final p = Path()
+        ..moveTo(x, top)
+        ..lineTo(x + cw * 1.1, cy)
+        ..quadraticBezierTo(x + cw * .6, cy + h * .018, x + cw * .25, cy - h * .004)
+        ..quadraticBezierTo(x, cy + h * .02, x - cw * .3, cy)
+        ..quadraticBezierTo(x - cw * .7, cy + h * .016, x - cw * 1.1, cy)
+        ..close();
+      c.drawPath(p, sp);
+      // Dal uçlarında küçük kar yastıkları
+      c.drawOval(Rect.fromCenter(center: Offset(x - tw * .4, ty - h * .006), width: tw * .22, height: h * .016), sp);
+      c.drawOval(Rect.fromCenter(center: Offset(x + tw * .4, ty - h * .006), width: tw * .22, height: h * .016), sp);
+    }
+  }
+
+  @override
+  void back(Canvas c, Size s) {
+    fillGradient(c, Offset.zero & s, const [Color(0xFF0E1730), Color(0xFF22345A), Color(0xFF51668F)],
+        stops: const [0, .55, 1]);
+    final moon = Offset(s.width * _moon.dx, s.height * _moon.dy);
+    final u = s.shortestSide;
+    glow(c, moon, u * .55, const Color(0xFFBFD3F2).withValues(alpha: .22));
+    glow(c, moon, u * .16, const Color(0xFFE8F0FF).withValues(alpha: .45));
+    c.drawCircle(moon, u * .045, Paint()..color = const Color(0xFFF4F7FF));
+    final star = Paint();
+    for (var i = 0; i < 70; i++) {
+      final p = Offset(rnd(i, 501) * s.width, rnd(i, 502) * s.height * .45);
+      if ((p - moon).distance < u * .25) continue;
+      star.color = Colors.white.withValues(alpha: .15 + rnd(i, 503) * .35);
+      c.drawCircle(p, .6 + rnd(i, 504) * .8, star);
+    }
+    // Uzak, sisli tepeler ve ormanlar
+    c.drawPath(ridge(s, .62, .05, 511), Paint()..color = const Color(0xFF7A8EB4));
+    for (var i = 0; i < 46; i++) {
+      final x = rnd(i, 512) * s.width;
+      final y = s.height * (.66 + rnd(i, 513) * .04);
+      c.drawPath(pine(x, y, u * (.08 + rnd(i, 514) * .06)), Paint()..color = const Color(0xFF5B6F99));
+    }
+    fillGradient(c, Rect.fromLTWH(0, s.height * .55, s.width, s.height * .2),
+        const [Color(0x0090A6CC), Color(0x6690A6CC), Color(0x0090A6CC)], stops: const [0, .6, 1]);
+    c.drawPath(ridge(s, .72, .035, 521, roughness: .5), Paint()..color = const Color(0xFFB4C3DC));
+    for (var i = 0; i < 30; i++) {
+      final x = rnd(i, 522) * s.width;
+      final y = s.height * (.74 + rnd(i, 523) * .03);
+      snowyPine(c, x, y, u * (.13 + rnd(i, 524) * .08), const Color(0xFF34476F), const Color(0xFFD5E0F0));
+    }
+  }
+
+  /// Kar taneleri: [layer] 0 uzak (küçük, yavaş) … 2 yakın (büyük, bulanık).
+  void _flakes(Canvas c, Size s, double t, int layer) {
+    final u = s.shortestSide;
+    final area = s.width * s.height;
+    final n = switch (layer) {
+      0 => (area / 4200).clamp(90, 300).toInt(),
+      1 => (area / 11000).clamp(40, 120).toInt(),
+      _ => (area / 60000).clamp(10, 26).toInt(),
+    };
+    final size = [u * .0022, u * .0045, u * .011][layer];
+    final speed = [s.height * .025, s.height * .045, s.height * .075][layer];
+    final p = Paint()..color = Colors.white.withValues(alpha: [.55, .75, .5][layer]);
+    if (layer == 2) p.maskFilter = MaskFilter.blur(BlurStyle.normal, size * .6);
+    final salt = 530 + layer * 10;
+    for (var i = 0; i < n; i++) {
+      final k = .75 + rnd(i, salt) * .5;
+      final travel = s.height + size * 8;
+      final y = (rnd(i, salt + 1) * travel + t * speed * k) % travel - size * 4;
+      final drift = sin(t * (.25 + rnd(i, salt + 2) * .3) + i) * u * (.012 + layer * .012);
+      final x = (rnd(i, salt + 3) * s.width + drift + t * u * .004 * (layer + 1)) % s.width;
+      c.drawCircle(Offset(x, y), size * (.6 + rnd(i, salt + 4) * .8), p);
+    }
+  }
+
+  @override
+  void mid(Canvas c, Size s, double t) {
+    _flakes(c, s, t, 0);
+    // Ağaçların arasında ağır ağır süzülen sis
+    for (var i = 0; i < 3; i++) {
+      final w = s.width * .9;
+      final x = (rnd(i, 541) * (s.width + w) + t * 5 * (1 + i * .3)) % (s.width + w) - w / 2;
+      final center = Offset(x, s.height * (.73 + i * .02));
+      c.drawOval(
+        Rect.fromCenter(center: center, width: w, height: s.height * .09),
+        Paint()
+          ..shader = ui.Gradient.radial(center, w / 2, [const Color(0x40C9D6EA), const Color(0x00C9D6EA)]),
+      );
+    }
+  }
+
+  @override
+  void front(Canvas c, Size s) {
+    final g = s.height * .82;
+    final ground = Path()..moveTo(0, g);
+    for (double x = 0; x <= s.width + 8; x += 8) {
+      ground.lineTo(x, g - s.height * .03 * sin(x / s.width * 2.4 + .4) - s.height * .015 * sin(x / s.width * 7));
+    }
+    ground
+      ..lineTo(s.width, s.height)
+      ..lineTo(0, s.height)
+      ..close();
+    c.drawPath(
+      ground,
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, g - s.height * .05), Offset(0, s.height),
+            const [Color(0xFFE4ECF8), Color(0xFFB9C8E0), Color(0xFF8EA1C4)], const [0, .5, 1]),
+    );
+    // Ay ışığının karda bıraktığı parlaklık
+    final moonX = s.width * _moon.dx;
+    glow(c, Offset(moonX, g + s.height * .05), s.width * .3, const Color(0xFFFFFFFF).withValues(alpha: .25));
+    final u = s.shortestSide;
+    // Sokak lambası ve sıcak ışığı
+    final lx = s.width * .3, ly = g - s.height * .01;
+    final lh = u * .3;
+    glow(c, Offset(lx, ly + u * .02), u * .22, const Color(0xFFFFC77A).withValues(alpha: .25));
+    final pole = Paint()..color = const Color(0xFF1B2440);
+    c.drawRect(Rect.fromLTWH(lx - u * .005, ly - lh, u * .01, lh), pole);
+    c.drawRect(Rect.fromLTWH(lx - u * .018, ly - lh - u * .03, u * .036, u * .03), pole);
+    c.drawRect(Rect.fromLTWH(lx - u * .022, ly - lh - u * .036, u * .044, u * .008), Paint()..color = const Color(0xFFE9F0FA));
+    glow(c, Offset(lx, ly - lh - u * .015), u * .2, const Color(0xFFFFD08A).withValues(alpha: .55), blend: BlendMode.plus);
+    c.drawCircle(Offset(lx, ly - lh - u * .015), u * .009, Paint()..color = const Color(0xFFFFF3D6));
+    // Yakın, iri karlı çamlar (kenarlarda, sayacı kapatmadan)
+    for (final (fx, fh) in [(-.02, .62), (.07, .46), (.93, .5), (1.03, .66), (.16, .3), (.84, .34)]) {
+      final x = s.width * fx;
+      snowyPine(c, x, g + s.height * .04, u * fh, const Color(0xFF16223F), const Color(0xFFE6EEF9));
+    }
+  }
+
+  @override
+  void top(Canvas c, Size s, double t) {
+    _flakes(c, s, t, 1);
+    // Karın üstünde göz kırpan ışıltılar
+    final g = s.height * .82;
+    final sp = Paint();
+    for (var i = 0; i < 40; i++) {
+      final tw = sin(t * (1.2 + rnd(i, 561) * 2) + i * 4);
+      if (tw < .7) continue;
+      sp.color = Colors.white.withValues(alpha: (tw - .7) / .3 * .9);
+      c.drawCircle(Offset(rnd(i, 562) * s.width, g + s.height * (.03 + rnd(i, 563) * .15)), 1.2, sp);
+    }
+    _flakes(c, s, t, 2);
+  }
+}
+
+/// Gerçek fotoğraf: karlı orman, üstünde katman katman süzülen kar.
+class PhotoSnowScene extends SnowfallScene {
+  const PhotoSnowScene();
+  @override
+  String get photo => 'assets/photos/kar.jpg';
+  @override
+  void back(Canvas c, Size s) {}
+  @override
+  bool get hasFront => false;
+  @override
+  void mid(Canvas c, Size s, double t) => _flakes(c, s, t, 0);
+  @override
+  void top(Canvas c, Size s, double t) {
+    _flakes(c, s, t, 1);
+    _flakes(c, s, t, 2);
+  }
+}
+
+/// Gerçek fotoğraf: dolu fırtınası, üstünde düşüp seken buz taneleri.
+class PhotoHailScene extends ScenePainter {
+  const PhotoHailScene();
+  @override
+  String get photo => 'assets/photos/dolu.jpg';
+  @override
+  bool get hasFront => false;
+  @override
+  void top(Canvas c, Size s, double t) => hailFall(c, s, t, s.height * .8, s.height * .99);
 }

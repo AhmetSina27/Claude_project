@@ -81,6 +81,24 @@ def write(name, x, peak=0.5, soften=6000):
     print("yazıldı", os.path.relpath(dst))
 
 
+def snowfall():
+    """Kar yağışı: karın yuttuğu boğuk sessizlik, uzakta hafif esinti ve çok seyrek, yumuşak çan tınıları."""
+    global rng
+    rng = np.random.default_rng(29)
+    t = np.arange(L) / L
+    hush = shaped_noise(L, lambda f: lp(500, 2)(f) * f ** -0.5) * slow_env(L, 3, .55, 1)
+    breeze = shaped_noise(L, bp(180, 700, 2)) * (0.3 + 0.7 * (0.5 - 0.5 * np.cos(2 * np.pi * 2 * t + 2))) * 0.35
+    x = hush + breeze
+    notes = [523.25, 587.33, 659.25, 783.99, 880.0]  # pentatonik, sakin
+    for start in (2.5, 9.0, 13.5, 21.0, 26.5):
+        f0 = notes[rng.integers(len(notes))]
+        n = int(SR * 3.5)
+        tt = np.arange(n) / SR
+        tone = (np.sin(2 * np.pi * f0 * tt) + .35 * np.sin(2 * np.pi * f0 * 2.76 * tt) * np.exp(-tt / .4))
+        add_event(x, tone * env(n, 0.004, 1.1) * 0.05, int(start * SR))
+    write("kar", x, peak=.33, soften=2500)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     for old in ("ucak", "tren"):
@@ -356,3 +374,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    snowfall()

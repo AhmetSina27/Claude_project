@@ -112,6 +112,7 @@ class _AmbientPainter extends CustomPainter {
       case AmbientSound.sualti:
       case AmbientSound.gunes:
       case AmbientSound.dolu:
+      case AmbientSound.kar:
       case AmbientSound.firtina:
         break;
       case AmbientSound.guguklu:

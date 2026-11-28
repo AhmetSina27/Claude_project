@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/scheduler.dart';
@@ -22,9 +23,9 @@ enum Scene {
   sualti('Su altı', Icons.scuba_diving_rounded, UnderwaterScene()),
   lavanta('Lavanta tarlası', Icons.spa_rounded, LavenderScene()),
   sisli('Sisli', Icons.foggy, FoggyScene()),
-  karli('Karlı', Icons.ac_unit_rounded, SnowVillageScene()),
+  karli('Kar yağışı', Icons.cloudy_snowing, PhotoSnowScene()),
   gunesli('Güneşli', Icons.wb_sunny_rounded, SunnyScene()),
-  dolu('Dolu', Icons.grain_rounded, HailScene()),
+  dolu('Dolu', Icons.grain_rounded, PhotoHailScene()),
   firtina('Fırtına', Icons.thunderstorm_rounded, StormScene());
 
   const Scene(this.label, this.icon, this.painter);
@@ -56,6 +57,7 @@ enum Scene {
     AmbientSound.guguklu => Scene.pencere,
     AmbientSound.gunes => Scene.gunesli,
     AmbientSound.dolu => Scene.dolu,
+    AmbientSound.kar => Scene.karli,
     AmbientSound.firtina => Scene.firtina,
     AmbientSound.none => Scene.sakin,
   };
@@ -76,7 +78,7 @@ enum Scene {
     Scene.sualti => AmbientSound.sualti,
     Scene.lavanta => AmbientSound.gece,
     Scene.sisli => AmbientSound.ruzgar,
-    Scene.karli => AmbientSound.kulube,
+    Scene.karli => AmbientSound.kar,
     Scene.gunesli => AmbientSound.gunes,
     Scene.dolu => AmbientSound.dolu,
     Scene.firtina => AmbientSound.firtina,
@@ -148,8 +150,36 @@ class _SceneViewState extends State<SceneView> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.of(context).devicePixelRatio.clamp(1.0, 2.0);
-    return RepaintBoundary(
-      child: CustomPaint(size: Size.infinite, painter: _ScenePainterAdapter(widget.scene, _time, _cache, dpr)),
+    final effects = CustomPaint(size: Size.infinite, painter: _ScenePainterAdapter(widget.scene, _time, _cache, dpr));
+    final photo = widget.scene.painter.photo;
+    if (photo == null) return RepaintBoundary(child: effects);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: const Color(0xFF10141C)),
+        // Fotoğraf çok yavaş yakınlaşıp uzaklaşır (Ken Burns); ayrı katmanda kalır.
+        RepaintBoundary(
+          child: ValueListenableBuilder<double>(
+            valueListenable: _time,
+            builder: (context, t, child) {
+              final k = .5 - .5 * cos(t / 40 * 2 * pi);
+              return Transform.scale(
+                scale: 1.04 + .05 * k,
+                alignment: Alignment(-.3 + .6 * k, .1),
+                child: child,
+              );
+            },
+            child: Image.asset(
+              photo,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+        RepaintBoundary(child: effects),
+      ],
     );
   }
 }
